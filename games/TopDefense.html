@@ -87,7 +87,7 @@ function update(dt){
  S.incT+=dt;if(S.incT>=1){S.incT=0;S.gold+=S.income;}
  if(S.spawnLeft>0){S.spawnT-=dt;if(S.spawnT<=0){spawnEnemy();S.spawnLeft--;S.spawnT=Math.max(.25,1.1-S.wave*.06);}}
  else if(!S.enemies.length){if(!S.waveBonus){S.waveBonus=1;const [bx,by]=PORT?unP(PW/2,PH/2-60):[W/2,TOP+60];gainBomb(bx,by,'웨이브 클리어! 💣 +1');}
-  S.waveT-=dt;if(S.waveT<=0){S.waveBonus=0;S.wave++;S.gold+=15+S.wave*3;S.waveT=3;S.spawnLeft=8+S.wave*4;S.eliteAt=Math.ceil(S.spawnLeft/2);}}
+  S.waveT-=dt;if(S.waveT<=0){S.waveBonus=0;S.wave++;{const bonus=40+S.wave*12;S.gold+=bonus;const [bx,by]=PORT?unP(PW/2,PH/2-20):[W/2,TOP+100];S.fx.push({x:bx,y:by,t:1.4,txt:'💰 웨이브 보너스 +'+bonus+'G',col:'#ffd27a'});}S.waveT=3;S.spawnLeft=8+S.wave*4;S.eliteAt=Math.ceil(S.spawnLeft/2);}}
  S.lordT-=dt;if(S.lordT<=0&&fireLord())S.lordT=S.lordRate;
  // defensive AI: archers hold a line near the wall; melee only sally out to meet enemies inside the guard zone, then hurry home
  const ARCH_LINE=CX+70,MELEE_LINE=CX+230,ENGAGE=CX+260;
@@ -282,7 +282,7 @@ const overBtn=p=>{const b=bombBtn();return Math.hypot(p.x-b.x,p.y-b.y)<b.r+6;};
 // ---------- tower menu: tap a tower to repair it or hire another archer for that tower (up to 4) ----------
 let selTower=null,tBtns=[];
 const repairCost=u=>Math.ceil((1-u.hp/u.max)*u.cost*0.9);
-const archCost=u=>[150,320,600][(u.arch||1)-1];
+const archCost=u=>[45,65,85][(u.arch||1)-1]; // always cheaper than a new tower (90G)
 function towerTap(p){
  const hitB=tBtns.find(b=>p.x>=b.x&&p.x<=b.x+b.w&&p.y>=b.y&&p.y<=b.y+b.h);
  if(selTower&&hitB){const u=selTower,say=(t,c)=>S.fx.push({x:u.x,y:u.y-70,t:.8,txt:t,col:c});

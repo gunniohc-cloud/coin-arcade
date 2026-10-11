@@ -172,6 +172,7 @@ function spawnEncounter(){S.gatesN++;
 // ---------- Top War style objects: number gates you shoot up, barrels you break for rewards ----------
 function label(w,h){const c=document.createElement('canvas');c.width=w;c.height=h;return {c,x:c.getContext('2d'),t:new THREE.CanvasTexture(c)};}
 const REWARDS=[{k:'dmg',txt:'🔫 공격력+',col:'#e09b18'},{k:'rate',txt:'⚡ 연사+',col:'#e09b18'},{k:'add',txt:'👥 +10',col:'#2a9df4'},{k:'x2',txt:'👥 ×2',col:'#7a3fd0'}];
+const SPECIALS=[{k:"x2",txt:"👥 ×2",col:"#7a3fd0"},{k:"rate",txt:"⚡⚡ 연사+",col:"#d0342c",big:1},{k:"dmg",txt:"🔫🔫 공격력+",col:"#d0342c",big:1}];
 function firepower(){const vol=Math.max(1,Math.min(S.count,25));return vol*S.dmg*Math.max(1,S.count/25)/S.rate;}
 function makeGate(lane,z,v){const L=label(256,160),m=new THREE.Mesh(new THREE.PlaneGeometry(LW-0.3,2.4),new THREE.MeshBasicMaterial({map:L.t,transparent:true,side:2}));
  m.position.set(LX[lane],1.4,z);scene.add(m);const o={type:'gate',lane,z,v,L,mesh:m,shown:null};drawGate(o);S.objs.push(o);return o;}
@@ -187,7 +188,7 @@ function drawBarrel(o){const n=Math.ceil(o.hp);if(n===o.shown)return;o.shown=n;c
  x.fillStyle=o.rw.col;x.fillRect(8,6,240,60);x.fillStyle='#fff';x.font='bold 36px sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText(o.rw.txt,128,38);
  x.fillStyle='#000a';x.fillRect(20,80,216,32);x.fillStyle='#ff5040';x.fillRect(20,80,216*Math.max(0,o.hp/o.max),32);x.fillStyle='#fff';x.font='bold 26px sans-serif';x.fillText(n,128,97);t.needsUpdate=true;}
 function removeObj(o){scene.remove(o.mesh);o.dead=1;}
-function gainReward(rw){if(rw.k=='dmg')S.dmg+=0.5;else if(rw.k=='rate')S.rate=Math.max(0.08,S.rate*0.8);else if(rw.k=='add')S.count+=10;else S.count*=2;SFX.power();flash(rw.txt+' 획득!');}
+function gainReward(rw){const k=rw.big?2:1;if(rw.k=="dmg")S.dmg+=0.5*k;else if(rw.k=="rate")S.rate=Math.max(0.06,S.rate*(rw.big?0.65:0.8));else if(rw.k=='add')S.count+=10;else S.count*=2;SFX.power();flash(rw.txt+' 획득!');}
 // a row = two lanes. Each lane holds a negative gate (shoot it up), a reward barrel (break it),
 // a barrel shielding a good gate, or an enemy group (hold the lane or the base takes damage).
 // three lanes: left/middle carry enemy squads hiding behind an item shield, the right lane streams soldier gates
@@ -259,7 +260,11 @@ function update(dt){
   if(S.dist>S.nextR){makeGate(2,-90,1+Math.floor(S.gatesN/4)+(S.stage-1));S.nextR=S.dist+6;} // endless conveyor of reinforcement gates
   if(S.dist>S.nextMini){spawnMini();S.nextMini=Infinity;S.nextGate=Math.max(S.nextGate,S.dist+45);}}
  if(!S.boss&&inStage>=S.stageLen+60&&!S.enemies.length){S.boss={z:-60,hp:(()=>{const v=Math.max(1,Math.min(S.count,25));return 80+S.stage*60+v*S.dmg*Math.max(1,S.count/25)/S.rate*7;})(),max:0,t:0};S.boss.max=S.boss.hp;boss.visible=true;bb.style.display='block';SFX.boss();
-  S.gates.forEach(g=>scene.remove(g.mesh));S.gates=[];S.objs.forEach(removeObj);S.objs=[];}
+  S.gates.forEach(g=>scene.remove(g.mesh));S.gates=[];S.objs.forEach(removeObj);S.objs=[];S.bd=0;S.nextBR=0;S.nextBS=12;}
+ // during the boss fight the conveyor keeps running: reinforcement gates on the right, a special item on the left
+ if(S.boss){S.bd+=S.speed*dt;
+  if(S.bd>S.nextBR){makeGate(2,-90,1+Math.floor(S.gatesN/4)+(S.stage-1));S.nextBR=S.bd+6;}
+  if(S.bd>S.nextBS){makeBarrel(0,-90,Math.max(10,firepower()*2.4),SPECIALS[Math.floor(Math.random()*SPECIALS.length)]);S.nextBS=S.bd+30;}}
  // gates
  for(const g of S.gates){g.z+=mv;g.mesh.position.z=g.z;
   if(!g.done&&g.z>=0){g.done=1;applyOp(g.ops[S.px<0?0:1]);g.mesh.children.forEach((c,i)=>{if(i<2&&i!=(S.px<0?0:1))c.visible=false;});}
@@ -272,7 +277,7 @@ function update(dt){
   for(let i=0;i<shots;i++){const fi=Math.floor(Math.random()*Math.min(S.count,MAXS)),f=form[fi];S.fired.push(fi);if(S.bullets.length<MAXB)S.bullets.push({x:S.px+f[0],z:f[1]-0.3,d:per,life:1.3});}}
  for(const b of S.bullets){b.pz=b.z;b.z-=40*dt;b.life-=dt;if(b.life<=0)b.dead=1;}
  // enemies
- const R=crowdR()+0.3;updateObjs(mv,R,dt);
+ const R=crowdR()+0.3;updateObjs(S.boss?S.speed*dt:mv,R,dt);
  for(const e of S.enemies){e.z+=mv+(e.mini?1.25:PUSH)*dt;
   if(!e.mini&&Math.abs(e.z)<R&&Math.abs(e.x-S.px)<R){e.dead=1;S.count--;SFX.hurt();}
   // enemy slipped past the army → penalty

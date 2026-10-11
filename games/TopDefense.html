@@ -72,7 +72,7 @@ function startBGM(){if(bgmT)return;let step=0;const bass=[110,110,147,147,131,13
 const UNITS=[
  {key:'1',ic:'⚔️',name:'검사',cost:30,hp:60,dmg:8,range:24,spd:50,rate:.8,col:'#4f8fff',kind:'sword'},
  {key:'2',ic:'🗼',name:'타워',cost:90,hp:320,dmg:9,range:210,spd:0,rate:.85,col:'#8a8f9c',kind:'tower',ranged:1,fixed:1},
- {key:'3',ic:'🪨',name:'투석기',cost:200,hp:200,dmg:22,range:470,spd:0,rate:4.2,col:'#8a5a2e',kind:'catapult',ranged:1,fixed:1,cat:1}];
+ {key:'3',ic:'🪨',name:'투석기',cost:400,hp:200,dmg:22,range:470,spd:0,rate:4.2,col:'#8a5a2e',kind:'catapult',ranged:1,fixed:1,cat:1}];
 const UPS=[
  {key:'q',ic:'👑',sh:'영주공격',name:'영주 공격력',lv:'dmg',max:999,cost:l=>Math.round(45+l*40+l*l*12),apply:()=>S.lordDmg+=5},
  {key:'w',ic:'⚡',sh:'영주공속',name:'영주 공속',lv:'rate',max:17,cost:l=>60+l*45,apply:()=>S.lordRate=Math.max(0.1,S.lordRate*.87)},

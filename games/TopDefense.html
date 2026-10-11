@@ -2,7 +2,7 @@
 <html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>영주 디펜스</title>
 <style>
 body{margin:0;background:#15121c;color:#fff;font-family:"Malgun Gothic",sans-serif;display:flex;flex-direction:column;align-items:center;padding:0 8px}
-canvas{max-width:100%;margin-top:8px;border-radius:10px;box-shadow:0 8px 30px #000a;touch-action:manipulation}
+canvas{max-width:100%;margin-top:8px;border-radius:10px;box-shadow:0 8px 30px #000a;touch-action:none}
 #ui{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:8px 0;width:100%;max-width:1000px}
 #ui h4{grid-column:1/-1;margin:4px 0 0;font-size:13px;color:#c9b88a;letter-spacing:.1em}
 button{background:linear-gradient(#4a3c2a,#33281b);color:#fbeed3;border:2px solid #8a6b3d;border-radius:8px;padding:8px 6px;font-size:13px;cursor:pointer;font-family:inherit;line-height:1.3}
@@ -41,7 +41,7 @@ const cv=document.getElementById('c'),g=cv.getContext('2d');
 const W=cv.width,H=cv.height,TOP=170,BOT=450,CX=150;
 let S;
 // ---------- sound ----------
-let AC=null;function au(){if(!AC)AC=new (window.AudioContext||window.webkitAudioContext)();AC.resume();}
+let AC=null;function au(){if(S&&!S.started&&!S.over)S.started=true;if(!AC)AC=new (window.AudioContext||window.webkitAudioContext)();AC.resume();}
 function tone(f,d,t='square',v=.08,sl=0){if(!AC)return;const n=AC.currentTime,o=AC.createOscillator(),q=AC.createGain();o.type=t;o.frequency.setValueAtTime(f,n);if(sl)o.frequency.exponentialRampToValueAtTime(Math.max(40,f+sl),n+d);q.gain.setValueAtTime(v,n);q.gain.exponentialRampToValueAtTime(.001,n+d);o.connect(q);q.connect(AC.destination);o.start(n);o.stop(n+d);}
 let lastBow=0;const SFX={bow(){const n=performance.now();if(n-lastBow<70)return;lastBow=n;tone(500,.06,'triangle',.05,-300)},boom(){tone(80,.5,'sawtooth',.25,-40)},coin(){tone(1300,.06,'triangle',.08)},pick(){tone(700,.1,'square',.08,500)}};
 // ---------- data ----------
@@ -56,7 +56,7 @@ const UPS=[
  {key:'r',ic:'🎯',sh:'방사활',name:'방사형 활',lv:'multi',max:2,cost:l=>[1500,5000][l],label:l=>l==0?'3발 활':l==1?'5발 활':'MAX',apply:()=>S.arrows+=2},
  {key:'t',ic:'🗡️',sh:'병사공격',name:'병사 공격력',lv:'uatk',max:99,cost:l=>50+l*40,apply:()=>{S.uAtk+=.2;S.units.forEach(u=>u.dmg=u.base.dmg*S.uAtk)}},
  {key:'y',ic:'❤️',sh:'병사체력',name:'병사 체력',lv:'uhp',max:99,cost:l=>50+l*40,apply:()=>{S.uHp+=.25;S.units.forEach(u=>{const r=u.hp/u.max;u.max=u.base.hp*S.uHp;u.hp=u.max*r;})}}];
-function reset(){S={gold:60,wave:1,castle:300,castleMax:300,lordDmg:10,lordRate:1,lordT:0,arrows:1,uAtk:1,uHp:1,income:2,incT:0,
+function reset(go){S={started:!!go,gold:60,wave:1,castle:300,castleMax:300,lordDmg:10,lordRate:1,lordT:0,arrows:1,uAtk:1,uHp:1,income:2,incT:0,
  units:[],enemies:[],shots:[],fx:[],items:[],bombs:1,spawnLeft:0,spawnT:0,waveT:3,over:false,paused:false,kills:0,shake:0,t:0,
  lv:{dmg:0,rate:0,wall:0,multi:0,uatk:0,uhp:0},lordAim:0,waveBonus:0};S.spawnLeft=6+S.wave*3;S.eliteAt=Math.ceil(S.spawnLeft/2);}
 function spawnEnemy(){const w=S.wave,boss=S.spawnLeft==1&&w%5==0,r=Math.random();
@@ -81,7 +81,7 @@ function fireLord(){const [sx,sy]=lordPos();const t=pickTarget(sx,sy,900);if(!t)
  const n=S.arrows;for(let i=1;i<n;i++){const off=Math.ceil(i/2)*(i%2?1:-1)*.16;S.shots.push({x:sx,y:sy,a:a+off,dmg:S.lordDmg*.8,spd:700,free:1,life:1.4});}
  SFX.bow();return true;}
 function update(dt){
- if(S.over||S.paused)return;S.t+=dt;
+ if(!S.started||S.over||S.paused)return;S.t+=dt;
  S.incT+=dt;if(S.incT>=1){S.incT=0;S.gold+=S.income;}
  if(S.spawnLeft>0){S.spawnT-=dt;if(S.spawnT<=0){spawnEnemy();S.spawnLeft--;S.spawnT=Math.max(.35,1.4-S.wave*.06);}}
  else if(!S.enemies.length){if(!S.waveBonus){S.waveBonus=1;const [bx,by]=PORT?unP(PW/2,PH/2-60):[W/2,TOP+60];gainBomb(bx,by,'웨이브 클리어! 💣 +1');}
@@ -212,6 +212,10 @@ function draw(){
  else[14,130,270,430,520,620].forEach((x,i)=>g.fillText(items[i],x,24));
  g.textAlign='center';const cx=CW/2,cy=CH/2;
  if(S.spawnLeft==0&&!S.enemies.length&&!S.over){g.font='bold 32px "Malgun Gothic"';g.lineWidth=5;g.strokeStyle='#000';const t=`다음 웨이브 ${Math.ceil(S.waveT)}`;g.strokeText(t,cx,cy);g.fillStyle='#fff';g.fillText(t,cx,cy);}
+ if(!S.over)drawBombUI();g.textAlign='center';
+ if(!S.started){g.fillStyle='#000a';g.fillRect(0,0,CW,CH);g.fillStyle='#ffd27a';g.font=`bold ${PORT?40:52}px "Malgun Gothic"`;g.fillText('영주 디펜스',cx,cy-30);
+  g.fillStyle='#fff';g.font='bold 20px "Malgun Gothic"';g.globalAlpha=.6+Math.sin(performance.now()/300)*.4;g.fillText('화면을 터치하면 시작',cx,cy+20);g.globalAlpha=1;
+  g.font='14px "Malgun Gothic"';g.fillStyle='#ccb';g.fillText('💣 폭탄은 버튼에서 드래그해서 투하',cx,cy+54);}
  if(S.paused){g.font='bold 40px "Malgun Gothic"';g.fillStyle='#fff';g.fillText('일시정지',cx,cy);}
  if(S.over){g.fillStyle='#000b';g.fillRect(0,0,CW,CH);g.fillStyle='#fff';g.font=`bold ${PORT?34:44}px "Malgun Gothic"`;g.fillText('성이 함락되었습니다',cx,cy-10);
   g.font='18px "Malgun Gothic"';g.fillText(`웨이브 ${S.wave} · 처치 ${S.kills}`,cx,cy+26);g.fillText('터치/클릭하여 재시작',cx,cy+52);}
@@ -225,10 +229,47 @@ UPS.forEach(u=>{const b=document.createElement('button');b.onclick=()=>upgrade(u
  b.innerHTML=`<i>${u.ic}</i><span>${u.label?u.label(l):u.sh+' '+l}</span><b>${mx?'MAX':c+'G'}</b>`;b.title=u.name+' ['+u.key.toUpperCase()+']';b.disabled=mx||S.gold<c||S.over;});});
 function summon(t){au();if(S.over||S.gold<t.cost)return;S.gold-=t.cost;S.units.push({...t,base:t,dmg:t.dmg*S.uAtk,hp:t.hp*S.uHp,max:t.hp*S.uHp,x:CX+30,y:TOP+Math.random()*(BOT-TOP),t:0,walk:0,atk:0,face:1});SFX.coin();}
 function upgrade(u){au();const l=S.lv[u.lv];if(l>=u.max)return;const c=u.cost(l);if(S.over||S.gold<c)return;S.gold-=c;S.lv[u.lv]++;u.apply();SFX.pick();}
-cv.onclick=ev=>{au();if(S.over){reset();return}if(S.paused)return;const r=cv.getBoundingClientRect(),scx=(ev.clientX-r.left)*CW/r.width,scy=(ev.clientY-r.top)*CH/r.height,[x,y]=unP(scx,scy);
- if(S.bombs<=0){S.fx.push({x,y,t:.6,txt:'폭탄 없음',col:'#ff8080'});return;}
- S.bombs--;S.shake=10;SFX.boom();S.fx.push({x,y,r:90,t:.6});for(const e of [...S.enemies])if(Math.hypot(e.x-x,e.y-y)<90+e.r)hit(e,40+S.lordDmg*3);};
-addEventListener('keydown',e=>{const k=e.key.toLowerCase();const u=UNITS.find(u=>u.key==k);if(u)summon(u);const p=UPS.find(p=>p.key==k);if(p)upgrade(p);if(k=='p')S.paused=!S.paused;});
+// ---------- bomb: drag from the bomb button, preview the blast, release to drop ----------
+// release on the button again or outside the screen cancels
+const BLAST=()=>PORT?100:90;
+function bombBtn(){return PORT?{x:CW-46,y:CH-170,r:32}:{x:CW-52,y:CH-52,r:34};}
+let drag=null;
+function evPos(ev){const r=cv.getBoundingClientRect();return {x:(ev.clientX-r.left)*CW/r.width,y:(ev.clientY-r.top)*CH/r.height,out:ev.clientX<r.left||ev.clientX>r.right||ev.clientY<r.top||ev.clientY>r.bottom};}
+const overBtn=p=>{const b=bombBtn();return Math.hypot(p.x-b.x,p.y-b.y)<b.r+6;};
+cv.addEventListener('pointerdown',ev=>{const wasStarted=S.started;au();
+ if(S.over){reset(true);return;}if(!wasStarted||S.paused)return;
+ const p=evPos(ev);
+ if(overBtn(p)){if(S.bombs<=0){const b=bombBtn();S.fx.push({...wrld(b.x,b.y-40),t:.8,txt:'폭탄 없음',col:'#ff8080'});return;}
+  drag={x:p.x,y:p.y,out:false,cancel:true};try{cv.setPointerCapture(ev.pointerId)}catch(e){}ev.preventDefault();}});
+cv.addEventListener('pointermove',ev=>{if(!drag)return;const p=evPos(ev);drag.x=p.x;drag.y=p.y;drag.out=p.out;drag.cancel=p.out||overBtn(p);});
+function endDrag(ev,forceCancel){if(!drag)return;const d=drag;drag=null;try{cv.releasePointerCapture(ev.pointerId)}catch(e){}
+ if(forceCancel||d.cancel||S.over||S.paused)return;
+ S.bombs--;S.shake=10;SFX.boom();const R=BLAST(),w=wrld(d.x,d.y);S.fx.push({...w,r:PORT?R/1.1:R,t:.6});
+ for(const e of [...S.enemies]){const [ex,ey]=P(e.x,e.y);if(Math.hypot(ex-d.x,ey-d.y)<R+e.r)hit(e,40+S.lordDmg*3);}}
+cv.addEventListener('pointerup',ev=>endDrag(ev,false));
+cv.addEventListener('pointercancel',ev=>endDrag(ev,true));
+function wrld(sx,sy){const [x,y]=unP(sx,sy);return {x,y};}
+function drawBombUI(){const b=bombBtn(),n=S.bombs,t=performance.now()/1000;
+ // button
+ g.save();g.globalAlpha=n?1:.45;
+ g.beginPath();g.arc(b.x,b.y,b.r,0,7);g.fillStyle='#1a1208dd';g.fill();g.lineWidth=3;g.strokeStyle=drag?'#ff8a3f':'#ffd27a';g.stroke();
+ if(n&&!drag){g.globalAlpha=.25+Math.sin(t*4)*.15;g.beginPath();g.arc(b.x,b.y,b.r+5,0,7);g.strokeStyle='#ffd27a';g.lineWidth=2;g.stroke();g.globalAlpha=1;}
+ E(b.x-2,b.y+3,15,15,'#222');E(b.x-7,b.y-3,4,3,'#fff5');g.strokeStyle='#a87';g.lineWidth=3;g.beginPath();g.moveTo(b.x+6,b.y-9);g.quadraticCurveTo(b.x+10,b.y-18,b.x+16,b.y-17);g.stroke();
+ if(n)E(b.x+16,b.y-17,3+Math.random()*2,3+Math.random()*2,'#ffcc33');
+ // count badge
+ g.globalAlpha=1;g.beginPath();g.arc(b.x+b.r*.72,b.y+b.r*.72,13,0,7);g.fillStyle=n?'#e0402f':'#555';g.fill();g.strokeStyle='#fff';g.lineWidth=2;g.stroke();
+ g.fillStyle='#fff';g.font='bold 15px sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText(n,b.x+b.r*.72,b.y+b.r*.72+1);g.textBaseline='alphabetic';
+ g.font='bold 11px "Malgun Gothic"';g.fillStyle='#fbeed3';g.fillText(drag?'여기로 놓으면 취소':'드래그해서 투하',b.x,b.y-b.r-8);
+ g.restore();
+ if(!drag||drag.out)return;
+ // blast preview
+ const R=BLAST();g.save();
+ if(drag.cancel){g.setLineDash([6,6]);g.strokeStyle='#ffffffaa';g.lineWidth=2;g.beginPath();g.arc(drag.x,drag.y,R,0,7);g.stroke();}
+ else{g.beginPath();g.arc(drag.x,drag.y,R,0,7);g.fillStyle='#ff5a1a33';g.fill();g.setLineDash([10,6]);g.lineDashOffset=-t*30;g.strokeStyle='#ff7a2a';g.lineWidth=3;g.stroke();
+  g.setLineDash([]);for(const e of S.enemies){const [ex,ey]=P(e.x,e.y);if(Math.hypot(ex-drag.x,ey-drag.y)<R+e.r){g.beginPath();g.arc(ex,ey,e.r+5,0,7);g.strokeStyle='#ff3030';g.lineWidth=2.5;g.stroke();}}}
+ g.setLineDash([]);E(drag.x,drag.y,13,13,'#222');g.strokeStyle='#fff';g.lineWidth=1.5;g.beginPath();g.moveTo(drag.x-R*.15,drag.y);g.lineTo(drag.x+R*.15,drag.y);g.moveTo(drag.x,drag.y-R*.15);g.lineTo(drag.x,drag.y+R*.15);g.stroke();
+ g.restore();}
+addEventListener('keydown',e=>{au();const k=e.key.toLowerCase();const u=UNITS.find(u=>u.key==k);if(u)summon(u);const p=UPS.find(p=>p.key==k);if(p)upgrade(p);if(k=='p')S.paused=!S.paused;});
 let last=performance.now();
 function loop(n){const dt=Math.min(.05,(n-last)/1000);last=n;update(dt);draw();btns.forEach(f=>f());requestAnimationFrame(loop);}
 function fit(){const st=document.getElementById("stage"),aw=st.clientWidth-4,ah=st.clientHeight-4,k=Math.min(aw/CW,ah/CH);cv.style.width=CW*k+"px";cv.style.height=CH*k+"px";}

@@ -248,7 +248,7 @@ function miniMesh(){let m=miniPool.find(o=>!o.visible);if(m){m.visible=true;retu
 function spawnMini(){const vol=Math.max(1,Math.min(S.count,25)),dps=vol*S.dmg*Math.max(1,S.count/25)/S.rate,hp=20+S.stage*25+dps*2.2;S.enemies.push({x:(Math.random()*2-1)*(ROAD-1.5),z:SPAWN_Z,hp,max:hp,mini:1,mesh:miniMesh()});flash('⚠ 중간보스 출현!');}
 let flashT=0;function flash(t){const el=document.getElementById('flash');el.textContent=t;el.style.opacity=1;flashT=1.2;}
 // soldier formation offsets (spiral)
-const form=[];for(let i=0;i<MAXS;i++){const a=i*2.39996,r=0.32*Math.sqrt(i);form.push([Math.cos(a)*r,Math.sin(a)*r*0.45]);/* shallow block so a big army stays on screen */}
+const form=[];for(let i=0;i<MAXS;i++){const a=i*2.39996,r=0.32*Math.sqrt(i);/* tall ellipse that grows backward (narrow side to side, so a big army can still partly dodge a barrel) */form.push([Math.cos(a)*r*0.6,Math.sin(a)*r*1.3-r*0.5]);}
 function crowdR(){return 0.32*Math.sqrt(Math.min(S.count,MAXS));}
 // input
 const keys={};addEventListener('keydown',e=>keys[e.key.toLowerCase()]=1);addEventListener('keyup',e=>keys[e.key.toLowerCase()]=0);
@@ -265,7 +265,7 @@ function update(dt){
  if(flashT>0){flashT-=dt;if(flashT<=0)document.getElementById('flash').style.opacity=0;}
  const mv=S.speed*dt*(S.boss?0.0:1);S.dist+=mv;
  if(keys['a']||keys['arrowleft'])S.tx-=9*dt;if(keys['d']||keys['arrowright'])S.tx+=9*dt;
- const lim=Math.max(0.3,ROAD-crowdR());S.tx=Math.max(-lim,Math.min(lim,S.tx));S.px+=(S.tx-S.px)*Math.min(1,dt*12);
+ const lim=Math.max(0.3,ROAD-crowdR()*0.6-0.2);S.tx=Math.max(-lim,Math.min(lim,S.tx));S.px+=(S.tx-S.px)*Math.min(1,dt*12);
  const inStage=S.dist-S.stageStart;
  // spawning
  if(!S.boss&&inStage<S.stageLen){

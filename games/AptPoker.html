@@ -83,12 +83,12 @@ const SFX={card:()=>tone(1200,0.04,'square',0.06),hold:()=>tone(660,0.06),coin:(
 // ---------- cards ----------
 const SU=['♠','♥','♦','♣'],RK=['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
 let deck=[];function shuffle(){deck=[];for(let s=0;s<4;s++)for(let r=0;r<13;r++)deck.push({r,s});for(let i=51;i>0;i--){const j=Math.random()*(i+1)|0;[deck[i],deck[j]]=[deck[j],deck[i]];}}
-const PAY=[['로얄 스트레이트 플러시',250],['스트레이트 플러시',50],['포카드',25],['풀하우스',9],['플러시',6],['스트레이트',4],['트리플',3],['투페어',2],['잭스 오어 베터',1]];
+const PAY=[['로얄 스트레이트 플러시',250],['스트레이트 플러시',50],['포카드',25],['풀하우스',9],['플러시',6],['스트레이트',4],['트리플',3],['투페어',2],['원페어',1]];
 function evaluate(h){const rs=h.map(c=>c.r).sort((a,b)=>a-b),cnt={};rs.forEach(r=>cnt[r]=(cnt[r]||0)+1);
  const v=Object.values(cnt).sort((a,b)=>b-a),fl=h.every(c=>c.s==h[0].s);
  const uniq=v.length==5,st=uniq&&(rs[4]-rs[0]==4||rs.join()=='0,1,2,3,12');
  if(st&&fl&&rs[0]==8)return 0;if(st&&fl)return 1;if(v[0]==4)return 2;if(v[0]==3&&v[1]==2)return 3;if(fl)return 4;if(st)return 5;if(v[0]==3)return 6;
- if(v[0]==2&&v[1]==2)return 7;if(v[0]==2){const pr=+Object.keys(cnt).find(k=>cnt[k]==2);if(pr>=9)return 8;}return -1;}
+ if(v[0]==2&&v[1]==2)return 7;if(v[0]==2)return 8;return -1;}
 // ---------- state ----------
 let credit=30000,peak=30000,bet=1,hand=[],held=[false,false,false,false,false],phase='idle',win=0,dbl=null,lastRank=-1;
 const $=id=>document.getElementById(id);
@@ -212,7 +212,7 @@ const RULES=[
  ['무늬 상관없이 숫자 5개가 연속. (A-2-3-4-5, 10-J-Q-K-A 모두 인정)','6♣ 7♦ 8♠ 9♥ 10♣'],
  ['트리플(트립스)은 같은 숫자 3장. 나머지 2장은 아무거나.','7♠ 7♥ 7♦ K♣* 2♥*'],
  ['서로 다른 원페어가 2개. 같은 숫자 2장짜리 두 쌍.','8♠ 8♦ Q♥ Q♣ 5♠*'],
- ['"잭스 오어 베터(Jacks or Better)"는 J, Q, K, A 중 하나로 만든 원페어. 이 기계는 원페어라도 J 이상이어야 돈을 줍니다. 10 이하 원페어는 꽝!','J♥ J♠ 4♦* 8♣* 2♠*']];
+ ['같은 숫자 2장이면 원페어. 2부터 A까지 어떤 숫자든 페어면 베팅한 만큼 돌려받아요.','5♥ 5♠ 9♦* K♣* 2♠*']];
 function showRule(i){const p=PAY[i],r=RULES[i];document.getElementById('ruleT').textContent=p[0];document.getElementById('ruleD').textContent=r[0];
  document.getElementById('ruleEx').innerHTML=r[1].split(' ').map(c=>{const dim=c.endsWith('*');c=c.replace('*','');const s=c.slice(-1),rk=c.slice(0,-1);return `<div class="mini ${'♥♦'.includes(s)?'red':''} ${dim?'dim':''}">${rk}<br>${s}</div>`;}).join('');
  document.getElementById('ruleP').innerHTML=`배당: 베팅 1코인당 <b style="color:var(--gold)">${p[1]}코인</b> · 지금 베팅(${bet}코인)이면 <b style="color:var(--gold)">${won((i==0&&bet==5?4000:p[1]*bet)*COIN)}</b>`;

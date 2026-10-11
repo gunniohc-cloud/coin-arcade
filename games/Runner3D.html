@@ -45,14 +45,15 @@ function startBGM(){stopBGM();if(!AC)return;let step=0;const bass=[110,110,165,1
 function stopBGM(){if(bgmT)clearInterval(bgmT);bgmT=null;}
 addEventListener('keydown',e=>{if(e.key.toLowerCase()=='m'){muted=!muted;}});
 
-const ROAD=6.3, MAXS=400, MAXE=300, MAXB=400;
+const ROAD=8.2, MAXS=400, MAXE=300, MAXB=400;
 const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(devicePixelRatio);renderer.shadowMap.enabled=true;
 document.body.appendChild(renderer.domElement);
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x87b8e8);scene.fog=new THREE.Fog(0xcfe4f2,45,115);
 const cam=new THREE.PerspectiveCamera(56,1,0.1,200);
 // fixed camera: the squad holds its ground, only enemies and gates come in
-function resize(){renderer.setSize(innerWidth,innerHeight);cam.aspect=innerWidth/innerHeight;const port=innerHeight>innerWidth;cam.fov=port?64:52;cam.position.set(0,port?22:8,port?17:8.6);cam.lookAt(0,0,port?-17:-12);document.getElementById("rot").hidden=!port;cam.updateProjectionMatrix();}
+function resize(){const vw=Math.round((window.visualViewport||window).width||innerWidth),vh=Math.round((window.visualViewport||window).height||innerHeight);renderer.setSize(vw,vh);cam.aspect=vw/vh;const port=innerHeight>innerWidth;cam.fov=port?64:52;cam.position.set(0,port?22:8,port?17:8.6);cam.lookAt(0,0,port?-17:-12);document.getElementById("rot").hidden=!port;cam.updateProjectionMatrix();}
 addEventListener('resize',resize);resize();
+if(window.visualViewport)visualViewport.addEventListener("resize",resize);
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 { // gradient sky dome
  const c=document.createElement('canvas');c.width=2;c.height=256;const x=c.getContext('2d');const gr=x.createLinearGradient(0,0,0,256);
@@ -74,7 +75,7 @@ grass.rotation.x=-Math.PI/2;grass.position.set(0,-0.01,-150);grass.receiveShadow
 [-1,1].forEach(d=>{const ct=texCanvas(64,64,(x)=>{x.fillStyle='#e8e8e8';x.fillRect(0,0,64,32);x.fillStyle='#d23a2f';x.fillRect(0,32,64,32);});ct.repeat.set(1,200);
  const c=new THREE.Mesh(new THREE.BoxGeometry(0.4,0.15,400),new THREE.MeshStandardMaterial({map:ct}));c.position.set(d*(ROAD+0.7),0.07,-150);c.receiveShadow=true;scene.add(c);});
 const stripes=[];for(let i=0;i<30;i++){const s=new THREE.Mesh(new THREE.PlaneGeometry(0.18,2),new THREE.MeshBasicMaterial({color:0xfff6c8}));
- s.rotation.x=-Math.PI/2;s.position.set((i%2?1:-1)*2.1,0.01,-Math.floor(i/2)*6);scene.add(s);stripes.push(s);} // lane dividers
+ s.rotation.x=-Math.PI/2;s.position.set((i%2?1:-1)*2.7,0.01,-Math.floor(i/2)*6);scene.add(s);stripes.push(s);} // lane dividers
 // scrolling trees on both sides
 const trees=[];{const trunkM=new THREE.MeshStandardMaterial({color:0x7a5230}),leafM=[0x3f8f3a,0x4fa244,0x2f7a34].map(c=>new THREE.MeshStandardMaterial({color:c,flatShading:true}));
  for(let i=0;i<40;i++){const t=new THREE.Group(),s=0.8+Math.random()*0.7;const tr=new THREE.Mesh(new THREE.CylinderGeometry(.15,.22,1.2,6),trunkM);tr.position.y=.6;tr.castShadow=true;t.add(tr);
@@ -199,7 +200,7 @@ function gainReward(rw){const k=rw.big?2:1;if(rw.k=="dmg")S.dmg+=0.5*k;else if(r
 // a row = two lanes. Each lane holds a negative gate (shoot it up), a reward barrel (break it),
 // a barrel shielding a good gate, or an enemy group (hold the lane or the base takes damage).
 // three lanes: left/middle carry enemy squads hiding behind an item shield, the right lane streams soldier gates
-const LX=[-4.2,0,4.2],LW=4.2,PUSH=0.75,SPAWN_Z=-50; // things appear closer so they read clearly
+const LX=[-5.4,0,5.4],LW=5.4,PUSH=0.75,SPAWN_Z=-40; // things appear closer so they read clearly
 function laneOf(x){return x<-LW/2?0:x<LW/2?1:2;}
 function spawnWave(){S.gatesN++;const fp=firepower(),both=S.gatesN>2&&Math.random()<0.4,first=Math.random()<0.5?0:1;
  (both?[0,1]:[first]).forEach(l=>{
@@ -258,7 +259,7 @@ function end(win){running=false;SFX.over();try{parent.postMessage({type:"arcade-
 
 let last=performance.now();
 let lastWH="";
-function tick(now){const wh=innerWidth+"x"+innerHeight;if(wh!==lastWH){lastWH=wh;resize();} // catches rotation even when no resize event fires
+function tick(now){const wh=innerWidth+"x"+innerHeight+"/"+(window.visualViewport?visualViewport.width+"x"+visualViewport.height:"");if(wh!==lastWH){lastWH=wh;resize();} // catches rotation even when no resize event fires
 const dt=Math.min(0.05,(now-last)/1000);last=now;if(running&&document.getElementById("rot").hidden)update(dt);render();requestAnimationFrame(tick);}
 function update(dt){
  if(flashT>0){flashT-=dt;if(flashT<=0)document.getElementById('flash').style.opacity=0;}
@@ -271,7 +272,7 @@ function update(dt){
   if(S.dist>S.nextGate){spawnWave();S.nextGate=S.dist+24+Math.random()*8;}
   if(S.dist>S.nextR){makeGate(2,SPAWN_Z,1+Math.floor(S.gatesN/4)+(S.stage-1));S.nextR=S.dist+6;} // endless conveyor of reinforcement gates
   if(S.dist>S.nextMini){spawnMini();S.nextMini=Infinity;S.nextGate=Math.max(S.nextGate,S.dist+45);}}
- if(!S.boss&&inStage>=S.stageLen+60&&!S.enemies.length){S.boss={z:-45,hp:(()=>{const v=Math.max(1,Math.min(S.count,25));return 80+S.stage*60+v*S.dmg*Math.max(1,S.count/25)/S.rate*7;})(),max:0,t:0};S.boss.max=S.boss.hp;boss.visible=true;bb.style.display='block';SFX.boss();
+ if(!S.boss&&inStage>=S.stageLen+60&&!S.enemies.length){S.boss={z:-36,hp:(()=>{const v=Math.max(1,Math.min(S.count,25));return 80+S.stage*60+v*S.dmg*Math.max(1,S.count/25)/S.rate*7;})(),max:0,t:0};S.boss.max=S.boss.hp;boss.visible=true;bb.style.display='block';SFX.boss();
   S.gates.forEach(g=>scene.remove(g.mesh));S.gates=[];S.objs.forEach(removeObj);S.objs=[];S.bd=0;S.nextBR=0;S.nextBS=12;}
  // during the boss fight the conveyor keeps running: reinforcement gates on the right, a special item on the left
  if(S.boss){S.bd+=S.speed*dt;

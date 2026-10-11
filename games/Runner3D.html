@@ -3,7 +3,7 @@
 <style>
 html,body{margin:0;height:100%;overflow:hidden;touch-action:none;-webkit-user-select:none;background:#87b8e8;font-family:"Malgun Gothic",sans-serif;user-select:none}
 #hud{position:fixed;top:10px;left:0;right:0;text-align:center;color:#fff;font-size:24px;font-weight:bold;text-shadow:0 2px 4px #0008;pointer-events:none}
-#cnt{position:fixed;color:#fff;font-size:32px;font-weight:900;background:#2f7cf6;padding:2px 12px;border-radius:14px;transform:translate(-50%,-100%);pointer-events:none;box-shadow:0 2px 6px #0006}
+#cnt{position:fixed;color:#fff;font-size:17px;font-weight:900;transform:translate(-50%,-100%);pointer-events:none;text-shadow:0 0 3px #000,0 1px 2px #000;letter-spacing:.02em}
 #msg{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;background:#0007;font-size:22px;text-align:center}
 #msg h1{font-size:48px;margin:0 0 10px}
 #flash{position:fixed;top:30%;left:0;right:0;text-align:center;color:#ffe14a;font-size:34px;font-weight:900;text-shadow:0 3px 0 #a3261b,0 0 18px #000;pointer-events:none;opacity:0;transition:opacity .3s}
@@ -261,7 +261,7 @@ function miniMesh(){let m=miniPool.find(o=>!o.visible);if(m){m.visible=true;retu
  const club=new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.25,1.6,8),new THREE.MeshStandardMaterial({color:0x6b4a2a}));club.position.set(1,1.4,0.2);club.rotation.z=-0.5;m.add(club);m.userData.club=club;
  const bar=new THREE.Mesh(new THREE.PlaneGeometry(1.6,0.14),new THREE.MeshBasicMaterial({color:0xff3333}));bar.position.y=3.1;m.add(bar);m.userData.bar=bar;
  scene.add(m);miniPool.push(m);return m;}
-function spawnMini(){const vol=Math.max(1,Math.min(S.count,25)),dps=vol*S.dmg*Math.max(1,S.count/25)/S.rate,hp=(20+S.stage*25+dps*3.2)*(1+0.3*(gateLevel()-1));S.enemies.push({x:(Math.random()*2-1)*(ROAD-1.5),z:SPAWN_Z,hp,max:hp,mini:1,mesh:miniMesh()});flash('⚠ 중간보스 출현!');}
+function spawnMini(){const vol=Math.max(1,Math.min(S.count,25)),dps=vol*S.dmg*Math.max(1,S.count/25)/S.rate,hp=(20+S.stage*25+dps*3.2)*(1+0.3*(gateLevel()-1));S.enemies.push({x:LX[Math.random()<0.5?0:1],z:SPAWN_Z,hp,max:hp,mini:1,mesh:miniMesh()});flash('⚠ 중간보스 출현!');}
 let flashT=0;function flash(t){const el=document.getElementById('flash');el.textContent=t;el.style.opacity=1;flashT=1.2;}
 // soldier formation offsets (spiral)
 const form=[];for(let i=0;i<MAXS;i++){const a=i*2.39996,r=0.32*Math.sqrt(i);/* tall ellipse that grows backward (narrow side to side, so a big army can still partly dodge a barrel) */form.push([Math.cos(a)*r*0.6,Math.sin(a)*r*1.3-r*0.5]);}
@@ -377,7 +377,7 @@ function render(){
   bulletM.count=k;bulletM.instanceMatrix.needsUpdate=true;
 
   const p=new THREE.Vector3(S.px,1.9,-crowdR()*0.45).project(cam);
-  cntEl.style.left=(p.x+1)/2*innerWidth+'px';cntEl.style.top=(viewTop+(1-p.y)/2*viewH)+'px';cntEl.textContent=S.count;if(PORT&&!hud._fit){hud._fit=1;resize();}S.pulse=Math.max(0,(S.pulse||0)-0.08);cntEl.style.transform=`translate(-50%,-100%) scale(${1+S.pulse*0.35})`;cntEl.style.background=S.pulse>0.3?"#3fdc7a":"#2f7cf6";
+  cntEl.style.left=(p.x+1)/2*innerWidth+'px';cntEl.style.top=(viewTop+(1-p.y)/2*viewH)+'px';cntEl.textContent=S.count;if(PORT&&!hud._fit){hud._fit=1;resize();}S.pulse=Math.max(0,(S.pulse||0)-0.08);cntEl.style.transform=`translate(-50%,-100%) scale(${1+S.pulse*0.2})`;cntEl.style.color=S.pulse>0.3?"#7fffa0":"#fff";
   const prog=S.boss?'BOSS!':Math.min(100,Math.floor((S.dist-S.stageStart)/(S.stageLen+60)*100))+'%';
   hud.textContent=`🏠 기지 ${S.base}  ·  스테이지 ${S.stage}  ·  진행 ${prog}  ·  공격력 ${S.dmg.toFixed(1)}  ·  공속 ${(1/S.rate).toFixed(1)}/s`;}
  renderer.render(scene,cam);}

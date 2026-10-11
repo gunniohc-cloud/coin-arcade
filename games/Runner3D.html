@@ -174,7 +174,7 @@ function spawnRow(){S.gatesN++;const z=-90,ez=-90-2.5*(90/S.speed),fp=firepower(
   else spawnEnemies(lane,ez);});}
 function updateObjs(mv,R,dt){const lane=laneOf(S.px);
  for(const o of S.objs){if(o.dead)continue;o.z+=mv+(o.type=="barrel"?PUSH*dt:0);o.mesh.position.z=o.z;
-  if(o.type=='gate'){drawGate(o);if(!o.done&&o.z>=0){o.done=1;if(o.lane==lane){const n=Math.floor(o.v);S.count+=n;n>=0?SFX.good():SFX.bad();flash((n>=0?'+':'')+n+' 병사');}o.mesh.material.opacity=.25;}}
+  if(o.type=='gate'){drawGate(o);if(!o.done&&o.z>=0){o.done=1;o.mesh.material.opacity=.25;}}
   else{drawBarrel(o);if(o.z>-R-0.75&&o.z<1&&o.lane==lane){const loss=Math.ceil(3+o.hp/o.max*S.count*0.35);S.count-=loss;SFX.hurt();flash('통에 깔림! -'+loss);removeObj(o);continue;}}
   if(o.z>10)removeObj(o);}
  S.objs=S.objs.filter(o=>!o.dead);}
@@ -183,7 +183,8 @@ function bulletHitsObj(b){const bl=laneOf(b.x),gain=(1.4+S.count*0.035)*S.rate/M
  for(const o of S.objs){if(o.dead||o.lane!=bl||o.done)continue;const face=o.type=='gate'?o.z:o.z+0.75;
   if(b.pz>=face&&b.z<face&&(o.type=='gate'||Math.abs(b.x-o.x)<0.95)&&face>bz){best=o;bz=face;}}
  if(!best)return false;
- if(best.type=='gate')best.v+=gain;else{best.hp-=b.d;if(best.hp<=0){burst(best.x,best.z,16,1);gainReward(best.rw);removeObj(best);}else if(Math.random()<.25)burst(b.x,best.z+0.8,1,1);}
+ if(best.type=='gate'){ // reinforcement gate: every volley that hits it adds +v soldiers right away
+  S.addAcc=(S.addAcc||0)+best.v/Math.max(1,Math.min(S.count,25));while(S.addAcc>=1){S.addAcc-=1;S.count++;S.pulse=1;{const nw=performance.now();if(nw-(S.addSnd||0)>90){S.addSnd=nw;tone(1046,0.05,"square",0.05,200);}}}if(Math.random()<.15)burst(b.x,best.z+0.3,1,1.4);}else{best.hp-=b.d;if(best.hp<=0){burst(best.x,best.z,16,1);gainReward(best.rw);removeObj(best);}else if(Math.random()<.25)burst(b.x,best.z+0.8,1,1);}
  return true;}
 // mid-boss: tanky ogre that walks with the road; blocks and chews the army, big penalty if it slips past
 const miniPool=[];
@@ -276,7 +277,7 @@ function render(){
   bulletM.count=k;bulletM.instanceMatrix.needsUpdate=true;
   cam.position.x+=(S.px*0.5-cam.position.x)*0.1;cam.lookAt(S.px*0.5,0,-8);
   const p=new THREE.Vector3(S.px,1.6+crowdR()*0.3,0).project(cam);
-  cntEl.style.left=(p.x+1)/2*innerWidth+'px';cntEl.style.top=(1-p.y)/2*innerHeight+'px';cntEl.textContent=S.count;
+  cntEl.style.left=(p.x+1)/2*innerWidth+'px';cntEl.style.top=(1-p.y)/2*innerHeight+'px';cntEl.textContent=S.count;S.pulse=Math.max(0,(S.pulse||0)-0.08);cntEl.style.transform=`translate(-50%,-100%) scale(${1+S.pulse*0.35})`;cntEl.style.background=S.pulse>0.3?"#3fdc7a":"#2f7cf6";
   const prog=S.boss?'BOSS!':Math.min(100,Math.floor((S.dist-S.stageStart)/(S.stageLen+60)*100))+'%';
   hud.textContent=`🏠 기지 ${S.base}  ·  스테이지 ${S.stage}  ·  진행 ${prog}  ·  공격력 ${S.dmg.toFixed(1)}  ·  공속 ${(1/S.rate).toFixed(1)}/s`;}
  renderer.render(scene,cam);}

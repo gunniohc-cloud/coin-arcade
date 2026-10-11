@@ -221,10 +221,12 @@ function gainReward(rw){if(WEAPONS.some(w=>w.k==rw.k)){if(S.wk===rw.k)S.wl=Math.
 const LX=[-5.4,0,5.4],LW=5.4,PUSH=0.75,SPAWN_Z=-40; // things appear closer so they read clearly
 function laneOf(x){return x<-LW/2?0:x<LW/2?1:2;}
 function spawnWave(){S.gatesN++;const fp=firepower(),both=S.gatesN>2&&Math.random()<0.4,first=Math.random()<0.5?0:1;
- (both?[0,1]:[first]).forEach(l=>{
+ (both?[first,1-first]:[first]).forEach((l,idx)=>{
+  // when both lanes attack, the second squad trails well behind and is a bit weaker, so both can be handled one after another
+  const lag=idx?14:0,soft=idx?0.7:1;
   let rw=Math.random()<.35?WEAPONS.filter(w=>w.k!==S.wk||S.wl<3)[Math.floor(Math.random()*4)%WEAPONS.filter(w=>w.k!==S.wk||S.wl<3).length]:Math.random()<.1&&S.count<80?REWARDS[3]:REWARDS[Math.floor(Math.random()*3)];if(rw.k=='add'){const v=Math.max(10,Math.round(S.count*0.35/5)*5,gateLevel()*12);rw={...rw,v,txt:'👥 +'+v};}
-  makeBarrel(l,SPAWN_Z,Math.max(6,fp*(1.8+Math.random()*0.8))*(1+0.25*(gateLevel()-1)),rw);   // the item is the squad's shield: break it to reach them (and keep the item)
-  spawnEnemies(l,SPAWN_Z-3.5);});}
+  makeBarrel(l,SPAWN_Z-lag,Math.max(6,fp*(1.8+Math.random()*0.8))*(1+0.25*(gateLevel()-1))*soft,rw);
+  const before=S.enemies.length;spawnEnemies(l,SPAWN_Z-3.5-lag);if(soft<1)for(let k=before;k<S.enemies.length;k++){S.enemies[k].hp*=soft;S.enemies[k].max*=soft;}});}
 function spawnRow(){S.gatesN++;const z=-90,ez=-90-2.5*(90/S.speed),fp=firepower(),st=S.stage;
  const gateV=()=>-(3+Math.floor(Math.random()*(4+st*3)));
  const pick=()=>{const r=Math.random();return r<.38?'gate':r<.68?'barrel':'enemy';};

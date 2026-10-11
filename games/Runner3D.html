@@ -65,7 +65,7 @@ function resize(){const vw=Math.round((window.visualViewport||window).width||inn
  renderer.setSize(w,h);const c=renderer.domElement;c.style.position='fixed';c.style.left='0';c.style.top=viewTop+'px';
  cam.aspect=w/h;cam.fov=42;cam.position.set(0,10.5,14);cam.lookAt(0,0,-7.5);cam.updateProjectionMatrix();
  document.body.classList.toggle('port',PORT);document.getElementById('rot').hidden=true;
- const hud=document.getElementById('hud');hud.style.top=PORT?Math.max(8,viewTop-64)+'px':'10px';
+ const hud=document.getElementById('hud');hud.style.fontSize=PORT?'17px':'';hud.style.padding=PORT?'0 10px':'';hud.style.top=PORT?Math.max(6,viewTop-(hud.offsetHeight||50)-10)+'px':'10px';
  const pad=document.getElementById('pad');pad.style.top=PORT?(viewTop+h+12)+'px':'';}
 addEventListener('resize',resize);resize();
 if(window.visualViewport)visualViewport.addEventListener("resize",resize);
@@ -366,7 +366,7 @@ function render(){
   bulletM.count=k;bulletM.instanceMatrix.needsUpdate=true;
 
   const p=new THREE.Vector3(S.px,1.6+crowdR()*0.3,0).project(cam);
-  cntEl.style.left=(p.x+1)/2*innerWidth+'px';cntEl.style.top=(viewTop+(1-p.y)/2*viewH)+'px';cntEl.textContent=S.count;S.pulse=Math.max(0,(S.pulse||0)-0.08);cntEl.style.transform=`translate(-50%,-100%) scale(${1+S.pulse*0.35})`;cntEl.style.background=S.pulse>0.3?"#3fdc7a":"#2f7cf6";
+  cntEl.style.left=(p.x+1)/2*innerWidth+'px';cntEl.style.top=(viewTop+(1-p.y)/2*viewH)+'px';cntEl.textContent=S.count;if(PORT&&!hud._fit){hud._fit=1;resize();}S.pulse=Math.max(0,(S.pulse||0)-0.08);cntEl.style.transform=`translate(-50%,-100%) scale(${1+S.pulse*0.35})`;cntEl.style.background=S.pulse>0.3?"#3fdc7a":"#2f7cf6";
   const prog=S.boss?'BOSS!':Math.min(100,Math.floor((S.dist-S.stageStart)/(S.stageLen+60)*100))+'%';
   hud.textContent=`🏠 기지 ${S.base}  ·  스테이지 ${S.stage}  ·  진행 ${prog}  ·  공격력 ${S.dmg.toFixed(1)}  ·  공속 ${(1/S.rate).toFixed(1)}/s`;}
  renderer.render(scene,cam);}

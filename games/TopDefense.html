@@ -134,7 +134,7 @@ function update(dt){
   else if(e&&u.ranged)step(u.hx,e.y,u.spd*.6); // archers just shuffle sideways to line up
   else step(u.hx,u.hy,u.spd*2.2);
   u.x=Math.min(u.x,u.ranged?ARCH_LINE:MELEE_LINE);}
- for(const e of S.enemies){e.t-=dt;e.walk+=dt*e.spd/6;const[u,d]=nearest(S.units,e.x,e.y);e.atk=Math.max(0,(e.atk||0)-dt*4);
+ for(const e of S.enemies){if(e.hitK>0)e.hitK-=dt;if(e.stun>0){e.stun-=dt;if(e.kx){const m=Math.min(e.kx,dt*260);e.x+=m;e.kx-=m;}continue;}e.t-=dt;e.walk+=dt*e.spd/6;const[u,d]=nearest(S.units,e.x,e.y);e.atk=Math.max(0,(e.atk||0)-dt*4);
   if(u&&d<=e.range+e.r+8){if(e.t<=0){e.t=e.rate;e.atk=1;u.hp-=e.dmg;}}
   else if(e.x>CX+50+e.r){const sm=(e.slowT>0?.5:1);e.slowT=(e.slowT||0)-dt;e.x-=e.spd*sm*dt;if(u&&d<120)e.y+=Math.sign(u.y-e.y)*e.spd*sm*dt*.5;}
   else if(e.t<=0){e.t=e.rate;e.atk=1;S.castle-=e.dmg;S.shake=4;SFX.castle();}}
@@ -416,11 +416,14 @@ function wrld(sx,sy){const [x,y]=unP(sx,sy);return {x,y};}
 function superUpdate(dt){if(S.paused)return;const W=SBW();
  for(const s of superShots){if(s.done){for(const p of s.trail)p[2]+=dt;s.trail=s.trail.filter(p=>p[2]<0.5);continue;}const step=1500*dt;s.t+=dt;s.x+=s.dx*step;s.y+=s.dy*step;s.trail.push([s.x,s.y,0]);for(const p of s.trail)p[2]+=dt;s.trail=s.trail.filter(p=>p[2]<0.5);
   for(const e of [...S.enemies]){if(s.hit.has(e))continue;const [ex,ey]=P(e.x,e.y),rx=ex-s.x,ry=ey-s.y,along=rx*s.dx+ry*s.dy,side=Math.abs(rx*s.dy-ry*s.dx);
-   if(along<20&&along>-step-30&&side<W+e.r){s.hit.add(e);hit(e,s.dmg);for(let i=0;i<5;i++)S.fx.push({x:e.x,y:e.y,vx:(Math.random()-.5)*200,vy:-Math.random()*160,t:.45,part:i%2?'#fff6c0':'#ffd040'});}}
+   if(along<20&&along>-step-30&&side<W+e.r){s.hit.add(e);e.stun=1;e.hitK=.35;e.kx=e.kind=='boss'?10:34;hit(e,s.dmg);S.shake=Math.max(S.shake,6);once('shit',60,()=>{noise(.12,.5,500,1);tone(60,.25,'sine',.6,-25);});S.fx.push({x:e.x,y:e.y-e.r*1.4,t:.9,txt:'-'+Math.round(s.dmg),col:'#ffec80'});S.fx.push({x:e.x,y:e.y,r:e.r*2.4,t:.4});for(let i=0;i<14;i++){const a=Math.random()*6.28,v=150+Math.random()*260;S.fx.push({x:e.x,y:e.y-e.r*.5,vx:Math.cos(a)*v,vy:Math.sin(a)*v-120,t:.55,part:i%3==0?'#ffffff':i%3==1?'#ffd040':'#ff5030'});}}}
   if(Math.random()<0.9)S.fx.push({...wrld(s.x+(Math.random()-.5)*W,s.y+(Math.random()-.5)*W),vx:(Math.random()-.5)*60,vy:-20-Math.random()*40,t:.4,part:Math.random()<.5?'#ffffff':'#ffe27a'});
   if(s.x<-80||s.x>CW+80||s.y<-80||s.y>CH+80)s.done=1;}
  superShots=superShots.filter(s=>!s.done||s.trail.length);}
-function drawSuperShots(){const W=SBW();
+function drawSuperShots(){const W=SBW(),T=performance.now()/1000;
+ for(const e of S.enemies){if(!(e.stun>0))continue;const [ex,ey]=P(e.x,e.y);
+  if(e.hitK>0){g.save();g.globalAlpha=Math.min(1,e.hitK/.35)*.75;g.fillStyle='#ffffff';g.beginPath();g.arc(ex,ey-e.r*.2,e.r*1.15,0,7);g.fill();g.globalAlpha*=.6;g.strokeStyle='#ffd040';g.lineWidth=4;g.beginPath();g.arc(ex,ey-e.r*.2,e.r*(1.2+(.35-e.hitK)*4),0,7);g.stroke();g.restore();}
+  for(let i=0;i<3;i++){const a=T*6+i*2.09,sx=ex+Math.cos(a)*e.r*.9,sy=ey-e.r*1.5+Math.sin(a)*e.r*.3;g.fillStyle='#ffe14a';g.font='bold '+Math.round(10+e.r*.25)+'px sans-serif';g.textAlign='center';g.fillText('★',sx,sy);}}
  for(const s of superShots){g.save();g.lineCap='round';
   // glowing trail
   for(let i=1;i<s.trail.length;i++){const a=s.trail[i-1],b=s.trail[i],k=1-b[2]/0.5;g.strokeStyle=`rgba(255,226,122,${0.35*k})`;g.lineWidth=W*2*k;g.beginPath();g.moveTo(a[0],a[1]);g.lineTo(b[0],b[1]);g.stroke();

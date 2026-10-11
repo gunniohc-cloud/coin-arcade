@@ -44,11 +44,12 @@ const W=cv.width,H=cv.height,TOP=170,BOT=450,CX=150;
 let S;
 // ---------- sound ----------
 // ---------- sound: louder master bus, arrow whooshes, hits, horn, castle thuds and a medieval march loop ----------
-let AC=null,master=null,bgmT=null;function au(){if(S&&!S.started&&!S.over)S.started=true;if(!AC){AC=new (window.AudioContext||window.webkitAudioContext)();master=AC.createGain();master.gain.value=0.9;master.connect(AC.destination);}AC.resume();}
+let AC=null,master=null,bgmT=null;function au(){if(S&&!S.started&&!S.over)S.started=true;if(!AC){AC=new (window.AudioContext||window.webkitAudioContext)({latencyHint:'interactive'});master=AC.createGain();master.gain.value=0.9;master.connect(AC.destination);}AC.resume();}
 let muted=false;function tone(f,d,t='square',v=.08,sl=0,dl=0){if(!AC||muted)return;const n=AC.currentTime+dl,o=AC.createOscillator(),q=AC.createGain();o.type=t;o.frequency.setValueAtTime(f,n);if(sl)o.frequency.exponentialRampToValueAtTime(Math.max(40,f+sl),n+d);q.gain.setValueAtTime(v,n);q.gain.exponentialRampToValueAtTime(.001,n+d);o.connect(q);q.connect(master);o.start(n);o.stop(n+d);}
-function noise(d,v=.15,freq=2000,q=1,dl=0,sweep=0){if(!AC||muted)return;const n=AC.currentTime+dl,len=Math.max(1,Math.floor(AC.sampleRate*d)),b=AC.createBuffer(1,len,AC.sampleRate),a=b.getChannelData(0);for(let i=0;i<len;i++)a[i]=Math.random()*2-1;
- const s=AC.createBufferSource(),f=AC.createBiquadFilter(),g=AC.createGain();s.buffer=b;f.type='bandpass';f.frequency.setValueAtTime(freq,n);if(sweep)f.frequency.exponentialRampToValueAtTime(Math.max(80,freq+sweep),n+d);f.Q.value=q;
- g.gain.setValueAtTime(v,n);g.gain.exponentialRampToValueAtTime(.001,n+d);s.connect(f);f.connect(g);g.connect(master);s.start(n);}
+// one shared noise buffer (making a new one per sound was slow enough to push sounds out of sync)
+let NB=null;function noise(d,v=.15,freq=2000,q=1,dl=0,sweep=0){if(!AC||muted)return;if(!NB){NB=AC.createBuffer(1,AC.sampleRate,AC.sampleRate);const a=NB.getChannelData(0);for(let i=0;i<a.length;i++)a[i]=Math.random()*2-1;}
+ const n=AC.currentTime+dl,s=AC.createBufferSource(),f=AC.createBiquadFilter(),g=AC.createGain();s.buffer=NB;f.type='bandpass';f.frequency.setValueAtTime(freq,n);if(sweep)f.frequency.exponentialRampToValueAtTime(Math.max(80,freq+sweep),n+d);f.Q.value=q;
+ g.gain.setValueAtTime(v,n);g.gain.exponentialRampToValueAtTime(.001,n+d);s.connect(f);f.connect(g);g.connect(master);s.start(n,Math.random()*0.5,d+0.02);}
 const thr={};const once=(k,ms,fn)=>{const n=performance.now();if(n-(thr[k]||0)<ms)return;thr[k]=n;fn();};
 const SFX={
  bow:()=>once('bow',60,()=>{noise(.16,.18,2600,2,0,-1800);tone(420,.05,'triangle',.06,-200);}),   // twang + whoosh of the arrow

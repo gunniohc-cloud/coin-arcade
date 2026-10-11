@@ -28,12 +28,11 @@ body.port #fsCorner,body.fs #fsCorner{display:none}
 <script>
 // ---- sound (Web Audio synth) ----
 let AC=null,master=null,muted=false,bgmT=null;
-function initAudio(){if(AC)return;AC=new (window.AudioContext||window.webkitAudioContext)();master=AC.createGain();master.gain.value=0.35;master.connect(AC.destination);}
+function initAudio(){if(AC)return;AC=new (window.AudioContext||window.webkitAudioContext)({latencyHint:'interactive'});master=AC.createGain();master.gain.value=0.35;master.connect(AC.destination);}
 function tone(f,d,type='square',vol=0.2,slide=0,delay=0){if(!AC||muted)return;const t=AC.currentTime+delay,o=AC.createOscillator(),g=AC.createGain();
  o.type=type;o.frequency.setValueAtTime(f,t);if(slide)o.frequency.exponentialRampToValueAtTime(Math.max(30,f+slide),t+d);
  g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(0.001,t+d);o.connect(g);g.connect(master);o.start(t);o.stop(t+d);}
-function noise(d,vol=0.2,delay=0){if(!AC||muted)return;const t=AC.currentTime+delay,b=AC.createBuffer(1,AC.sampleRate*d,AC.sampleRate),a=b.getChannelData(0);
- for(let i=0;i<a.length;i++)a[i]=(Math.random()*2-1)*(1-i/a.length);const s=AC.createBufferSource(),g=AC.createGain();s.buffer=b;g.gain.value=vol;s.connect(g);g.connect(master);s.start(t);}
+let NB=null;function noise(d,vol=0.2,delay=0){if(!AC||muted)return;if(!NB){NB=AC.createBuffer(1,AC.sampleRate,AC.sampleRate);const a=NB.getChannelData(0);for(let i=0;i<a.length;i++)a[i]=Math.random()*2-1;}const t=AC.currentTime+delay,s=AC.createBufferSource(),g=AC.createGain();s.buffer=NB;g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(0.001,t+d);s.connect(g);g.connect(master);s.start(t,Math.random()*0.5,d+0.02);}
 let lastShot=0,lastKill=0,lastHurt=0;
 const SFX={
  shoot(){const n=performance.now();if(n-lastShot<90)return;lastShot=n;tone(900,0.05,'square',0.04,-500);},

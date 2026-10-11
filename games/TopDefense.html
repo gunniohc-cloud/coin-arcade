@@ -143,8 +143,14 @@ function drawCastle(){const x0=10,w=CX-20,top=TOP-90;
  g.fillStyle='#ffcc33';g.beginPath();g.moveTo(lx-11,ly-24);g.lineTo(lx-8,ly-34);g.lineTo(lx-3,ly-27);g.lineTo(lx,ly-36);g.lineTo(lx+3,ly-27);g.lineTo(lx+8,ly-34);g.lineTo(lx+11,ly-24);g.fill();
  g.save();g.translate(lx,ly);g.rotate(S.lordAim);g.strokeStyle='#6b3d1a';g.lineWidth=3;g.beginPath();g.arc(8,0,18,-1.2,1.2);g.stroke();
  g.strokeStyle='#eee';g.lineWidth=1;g.beginPath();g.moveTo(8+18*Math.cos(-1.2),18*Math.sin(-1.2));g.lineTo(8-6*(S.lordT/S.lordRate),0);g.lineTo(8+18*Math.cos(1.2),18*Math.sin(1.2));g.stroke();g.restore();
- const p=S.castle/S.castleMax;g.fillStyle='#0009';g.fillRect(x0,BOT+4,w,14);g.fillStyle=p>.5?'#5be36b':p>.25?'#ffc23a':'#ff4b4b';g.fillRect(x0,BOT+4,w*p,14);g.fillStyle='#fff';g.font='bold 11px sans-serif';g.textAlign='center';g.fillText('🏰 '+Math.ceil(S.castle)+'/'+S.castleMax,x0+w/2,BOT+15);g.textAlign='left';}
-function drawTower(x,y,u,ghost){ // stone archer tower; y is its base
+ }
+// castle HP: a big gauge with the number, painted right on the castle wall (drawn on top of everything on the field)
+function drawCastleHP(){const p=Math.max(0,S.castle/S.castleMax),col=p>.5?'#5be36b':p>.25?'#ffc23a':'#ff4b4b';
+ let x,y,w,h;if(PORT){const top=PH-10-CX*KY;x=14;y=top+34;w=PW-110;h=20;}else{x=16;y=TOP+30;w=CX-32;h=20;}
+ g.save();g.fillStyle='#1a1208dd';g.beginPath();g.roundRect?g.roundRect(x-3,y-3,w+6,h+6,8):g.rect(x-3,y-3,w+6,h+6);g.fill();
+ g.fillStyle='#3a2a2a';g.fillRect(x,y,w,h);g.fillStyle=col;g.fillRect(x,y,w*p,h);g.fillStyle='#ffffff33';g.fillRect(x,y,w*p,h*0.4);
+ g.fillStyle='#fff';g.font='bold 13px "Malgun Gothic",sans-serif';g.textAlign='center';g.textBaseline='middle';g.lineWidth=3;g.strokeStyle='#000';
+ const t='🏰 '+Math.ceil(Math.max(0,S.castle))+' / '+S.castleMax;g.strokeText(t,x+w/2,y+h/2+1);g.fillText(t,x+w/2,y+h/2+1);g.restore();}function drawTower(x,y,u,ghost){ // stone archer tower; y is its base
  if(!ghost)E(x,y+4,22,6,'#0005');
  const st=g.createLinearGradient(x-18,0,x+18,0);st.addColorStop(0,'#7d8291');st.addColorStop(1,'#b0b5c2');g.fillStyle=st;
  g.beginPath();g.moveTo(x-18,y);g.lineTo(x-14,y-44);g.lineTo(x+14,y-44);g.lineTo(x+18,y);g.closePath();g.fill();
@@ -205,7 +211,7 @@ function drawCastleP(){const top=PH-10-CX*KY,base=PH;
  g.fillStyle='#8f94a2';for(let i=0;i<PW;i+=36)g.fillRect(i+4,top-14,22,16);
  [[30,1],[PW-30,-1]].forEach(([fx])=>{g.fillStyle='#555';g.fillRect(fx,top-58,3,46);g.fillStyle='#c0392b';g.beginPath();g.moveTo(fx+3,top-58);g.lineTo(fx+30,top-50);g.lineTo(fx+3,top-42);g.fill();});
  const [lx,ly]=P(...lordPos());drawLord(lx,ly);
- const p=S.castle/S.castleMax;g.fillStyle='#0009';g.fillRect(10,PH-20,PW-110,14);g.fillStyle=p>.5?'#5be36b':p>.25?'#ffc23a':'#ff4b4b';g.fillRect(10,PH-20,(PW-110)*p,14);g.fillStyle='#fff';g.font='bold 11px sans-serif';g.textAlign='center';g.fillText('🏰 '+Math.ceil(S.castle)+'/'+S.castleMax,10+(PW-110)/2,PH-9);g.textAlign='left';}
+ }
 function drawLord(lx,ly){E(lx,ly+6,16,18,'#2b4fa8');E(lx,ly-16,11,11,'#ffd9b0');
  g.fillStyle='#ffcc33';g.beginPath();g.moveTo(lx-11,ly-24);g.lineTo(lx-8,ly-34);g.lineTo(lx-3,ly-27);g.lineTo(lx,ly-36);g.lineTo(lx+3,ly-27);g.lineTo(lx+8,ly-34);g.lineTo(lx+11,ly-24);g.fill();
  g.save();g.translate(lx,ly);g.rotate(angP(S.lordAim));g.strokeStyle='#6b3d1a';g.lineWidth=3;g.beginPath();g.arc(8,0,18,-1.2,1.2);g.stroke();
@@ -228,6 +234,7 @@ function draw(){
  else[14,150,310,430].forEach((x,i)=>g.fillText(items[i],x,24));
  g.textAlign='center';const cx=CW/2,cy=CH/2;
  if(S.spawnLeft==0&&!S.enemies.length&&!S.over){g.font='bold 32px "Malgun Gothic"';g.lineWidth=5;g.strokeStyle='#000';const t=`다음 웨이브 ${Math.ceil(S.waveT)}`;g.strokeText(t,cx,cy);g.fillStyle='#fff';g.fillText(t,cx,cy);}
+ drawCastleHP();
  if(!S.over){drawTowerDrag();drawRepair();drawBombUI();}g.textAlign='center';
  if(!S.started){g.fillStyle='#000a';g.fillRect(0,0,CW,CH);g.fillStyle='#ffd27a';g.font=`bold ${PORT?40:52}px "Malgun Gothic"`;g.fillText('영주 디펜스',cx,cy-30);
   g.fillStyle='#fff';g.font='bold 20px "Malgun Gothic"';g.globalAlpha=.6+Math.sin(performance.now()/300)*.4;g.fillText('화면을 터치하면 시작',cx,cy+20);g.globalAlpha=1;

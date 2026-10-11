@@ -72,7 +72,7 @@ function startBGM(){if(bgmT)return;let step=0;const bass=[110,110,147,147,131,13
 const UNITS=[
  {key:'1',ic:'⚔️',name:'검사',cost:30,hp:60,dmg:8,range:24,spd:50,rate:.8,col:'#4f8fff',kind:'sword'},
  {key:'2',ic:'🗼',name:'타워',cost:90,hp:320,dmg:9,range:210,spd:0,rate:.85,col:'#8a8f9c',kind:'tower',ranged:1,fixed:1},
- {key:'3',ic:'🪨',name:'투석기',cost:200,hp:200,dmg:28,range:470,spd:0,rate:3.2,col:'#8a5a2e',kind:'catapult',ranged:1,fixed:1,cat:1}];
+ {key:'3',ic:'🪨',name:'투석기',cost:200,hp:200,dmg:28,range:470,spd:0,rate:4.2,col:'#8a5a2e',kind:'catapult',ranged:1,fixed:1,cat:1}];
 const UPS=[
  {key:'q',ic:'👑',sh:'영주공격',name:'영주 공격력',lv:'dmg',max:99,cost:l=>45+l*35,apply:()=>S.lordDmg+=5},
  {key:'w',ic:'⚡',sh:'영주공속',name:'영주 공속',lv:'rate',max:15,cost:l=>60+l*45,apply:()=>S.lordRate*=.87},
@@ -175,7 +175,7 @@ function drawCastleHP(){const p=Math.max(0,S.castle/S.castleMax),col=p>.5?'#5be3
  g.fillStyle='#fff';g.font='bold 13px "Malgun Gothic",sans-serif';g.textAlign='center';g.textBaseline='middle';g.lineWidth=3;g.strokeStyle='#000';
  const t='🏰 '+Math.ceil(Math.max(0,S.castle))+' / '+S.castleMax;g.strokeText(t,x+w/2,y+h/2+1);g.fillText(t,x+w/2,y+h/2+1);g.restore();}// ---------- catapult: slow, lobs a boulder that splashes an area. Upgrades (per catapult) add power, a bigger blast and,
 // from Lv2, flaming boulders that leave enemies burning ----------
-const catCost=u=>[110,160,220,300][(u.lvl||1)-1];
+const catCost=u=>[200,450,850,1600][(u.lvl||1)-1];
 function catFire(u){let best=null,bs=-1;
  for(const e of S.enemies){const d=Math.hypot(e.x-u.x,e.y-u.y);if(d>u.range||d<130||e.hp-e.pend<=0)continue;let n=0; /* catapult can't hit things right next to it */for(const o of S.enemies)if(Math.hypot(o.x-e.x,o.y-e.y)<60)n++;
   const sc=n*10-d*0.01+(e.x<u.x+200?5:0);if(sc>bs){bs=sc;best=e;}}

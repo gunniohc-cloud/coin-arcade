@@ -102,7 +102,7 @@ let S,running=false;
 const cntEl=document.getElementById('cnt'),hud=document.getElementById('hud'),msg=document.getElementById('msg'),bb=document.getElementById('bossbar');
 function reset(){
  for(const g of (S?S.gates:[]))scene.remove(g.mesh);for(const o of (S?S.objs:[]))scene.remove(o.mesh);
- S={count:3,base:100,gatesN:0,px:0,tx:0,dist:0,speed:9,stage:1,dmg:1,rate:0.35,fireT:0,enemies:[],bullets:[],gates:[],objs:[],parts:[],fired:[],nextGate:20,nextR:8,nextEnemy:40,nextMini:132,leak:0,
+ S={count:3,base:100,gatesN:0,px:0,tx:0,dist:0,speed:4.5,stage:1,dmg:1,rate:0.35,fireT:0,enemies:[],bullets:[],gates:[],objs:[],parts:[],fired:[],nextGate:20,nextR:8,nextEnemy:40,nextMini:132,leak:0,
    boss:null,stageLen:220,stageStart:0};
  boss.visible=false;bb.style.display='none';
 }
@@ -126,7 +126,7 @@ function applyOp(o){if(!o)return;if(o.t=='-'||o.t=='/')SFX.bad();else if(o.t=='d
 // most of the approach window: you can either hold that lane and shoot, or grab the gate on the other side — not both.
 function spawnEnemies(lane,z0){z0=z0||-90;const n=Math.min(60,6+S.stage*2+Math.floor(Math.random()*3));
  const vol=Math.max(1,Math.min(S.count,25)),dps=vol*S.dmg*Math.max(1,S.count/25)/S.rate;
- let hp=Math.max(1+S.stage*0.6,dps*1.7/n);if(S.stage==1&&S.dist<110)hp*=0.6;
+ let hp=Math.max(1+S.stage*0.6,dps*2.4/n);if(S.stage==1&&S.dist<110)hp*=0.6;
  const cx=lane==null?(Math.random()*2-1)*(ROAD-1.5):LX[lane],lo=lane==null?-ROAD:LX[lane]-LW/2+0.35,hi=lane==null?ROAD:LX[lane]+LW/2-0.35;
  for(let i=0;i<n;i++){const a=i*2.4,r=0.35*Math.sqrt(i);S.enemies.push({x:Math.max(lo,Math.min(hi,cx+Math.cos(a)*r)),z:z0+Math.sin(a)*r,hp,max:hp});}}
 // encounter = a good gate on one side + an enemy group on the other side, arriving together
@@ -156,7 +156,7 @@ function gainReward(rw){if(rw.k=='dmg')S.dmg+=0.5;else if(rw.k=='rate')S.rate=Ma
 // a row = two lanes. Each lane holds a negative gate (shoot it up), a reward barrel (break it),
 // a barrel shielding a good gate, or an enemy group (hold the lane or the base takes damage).
 // three lanes: left/middle carry enemy squads hiding behind an item shield, the right lane streams soldier gates
-const LX=[-4.2,0,4.2],LW=4.2,PUSH=1.5;
+const LX=[-4.2,0,4.2],LW=4.2,PUSH=0.75;
 function laneOf(x){return x<-LW/2?0:x<LW/2?1:2;}
 function spawnWave(){S.gatesN++;const fp=firepower(),both=S.gatesN>2&&Math.random()<0.4,first=Math.random()<0.5?0:1;
  (both?[0,1]:[first]).forEach(l=>{
@@ -238,7 +238,7 @@ function update(dt){
  for(const b of S.bullets){b.pz=b.z;b.z-=40*dt;b.life-=dt;if(b.life<=0)b.dead=1;}
  // enemies
  const R=crowdR()+0.3;updateObjs(mv,R,dt);
- for(const e of S.enemies){e.z+=mv+(e.mini?2.5:PUSH)*dt;
+ for(const e of S.enemies){e.z+=mv+(e.mini?1.25:PUSH)*dt;
   if(!e.mini&&Math.abs(e.z)<R&&Math.abs(e.x-S.px)<R){e.dead=1;S.count--;SFX.hurt();}
   // enemy slipped past the army → penalty
   if(!e.dead&&e.z>R+0.5){e.dead=1;const p=e.mini?40:3;S.base=Math.max(0,S.base-p);SFX.hurt();flash(e.mini?'중간보스 돌파! 기지 -'+p:'적 돌파! 기지 -'+p);}}
@@ -248,7 +248,7 @@ function update(dt){
   if(!b.dead&&S.boss&&Math.abs(b.z-S.boss.z)<1.2&&Math.abs(b.x)<1.6){S.boss.hp-=b.d;b.dead=1;SFX.bossHit();}}
  S.bullets=S.bullets.filter(b=>!b.dead);S.enemies=S.enemies.filter(e=>!e.dead);
  // boss
- if(S.boss){const B=S.boss;B.z=Math.min(-R-1.2,B.z+2*dt);boss.position.set(0,0,B.z);
+ if(S.boss){const B=S.boss;B.z=Math.min(-R-1.2,B.z+1*dt);boss.position.set(0,0,B.z);
   if(B.z>=-R-1.3){B.t-=dt;if(B.t<=0){B.t=0.2;SFX.hurt();S.count-=1+Math.floor(S.count*0.05);}}
   bb.firstChild.style.width=Math.max(0,B.hp/B.max*100)+'%';
   if(B.hp<=0){SFX.clear();S.boss=null;boss.visible=false;bb.style.display='none';S.stage++;S.stageStart=S.dist;S.nextGate=S.dist+10;S.nextEnemy=S.dist+40;S.nextMini=S.dist+S.stageLen*0.6;S.base=Math.min(100,S.base+30);flash("스테이지 클리어! 기지 +30");}}

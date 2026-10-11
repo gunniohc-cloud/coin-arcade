@@ -369,7 +369,7 @@ function towerTap(p){
   else if(u.cat){const tr=hitB.k=='rock'?'rock':hitB.k=='fire'?'fire':null;if(!tr)return true;if(u.track&&u.track!==tr){say('다른 강화 트랙을 이미 선택','#ff8080');return true;}if((u.tl||0)>=4)return true;const c=catCost(u);if(S.gold<c){say('골드 부족','#ff8080');return true;}S.gold-=c;u.spent=(u.spent||u.cost)+c;u.track=tr;u.tl=(u.tl||0)+1;SFX.pick();say((tr=='rock'?'🪨 강철돌 Lv':'🔥 불항아리 Lv')+u.tl,'#ffd27a');}
   else if(hitB.k=='arch'){if((u.arch||1)>=4)return true;const c=archCost(u);if(S.gold<c){say('골드 부족','#ff8080');return true;}S.gold-=c;u.spent=(u.spent||u.cost)+c;u.arch=(u.arch||1)+1;SFX.pick();say('🏹 궁수 '+u.arch+'명','#ffd27a');}
   return true;}
- const t=S.units.filter(u=>u.fixed).find(u=>{const [sx,sy]=P(u.x,u.y);return Math.abs(p.x-sx)<24&&p.y<sy+10&&p.y>sy-66;});
+ const t=S.units.filter(u=>u.fixed).filter(u=>{const [sx,sy]=P(u.x,u.y),hw=u.cat?27:19;return Math.abs(p.x-sx)<=hw&&p.y<=sy+(u.cat?13:6)&&p.y>=sy-(u.cat?50:60);}).sort((a,b)=>{const [ax,ay]=P(a.x,a.y),[bx,by]=P(b.x,b.y);return Math.hypot(p.x-ax,p.y-ay+25)-Math.hypot(p.x-bx,p.y-by+25);})[0];
  if(t){selTower=t===selTower?null:t;return true;}
  if(selTower){selTower=null;return true;}
  return false;}

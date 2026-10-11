@@ -337,12 +337,12 @@ function hurtObj(o,dmg,shots){if(o.dead||o.done)return;
  o.hp-=dmg;if(o.hp<=0){burst(o.x,o.z,16,1);gainReward(o.rw);removeObj(o);}}
 function weaponsUpdate(dt,R){if(!S.w)S.w={laser:0,flame:0,missile:0};const W=S.w,base=wpnBase(),px=S.px,lane=laneOf(px);
  // laser: a straight beam in front of the army, hits everything in its column
- if(W.laser){const dps=base*0.7*(0.7+0.3*W.laser),w=0.7+W.laser*0.15;
+ if(W.laser){const dps=base*0.2*(0.7+0.3*W.laser),w=0.7+W.laser*0.15;
   for(const e of S.enemies)if(e.z<0&&e.z>-44&&Math.abs(e.x-px)<w+(e.mini?1:0.3)){hurtEnemy(e,dps*dt);if(Math.random()<0.08)sparkle(e.x,0.8,e.z,1,3);}
   for(const o of S.objs)if(o.z<0&&o.z>-44&&o.lane==lane&&(o.type=='gate'||Math.abs(o.x-px)<LW/2))hurtObj(o,dps*dt,dps*dt/perB());
   if(S.boss&&Math.abs(px)<1.6+w)S.boss.hp-=dps*dt;}
  // flamethrower: short wide cone, burns groups
- if(W.flame){const dps=base*0.55*(0.7+0.3*W.flame),reach=-(7+W.flame*1.2);
+ if(W.flame){const dps=base*0.3*(0.7+0.3*W.flame),reach=-(7+W.flame*1.2);
   for(const e of S.enemies)if(e.z<0&&e.z>reach&&Math.abs(e.x-px)<2.2+(-e.z)*0.12)hurtEnemy(e,dps*dt);
   for(const o of S.objs)if(o.z<0&&o.z>reach-0.8&&o.lane==lane)hurtObj(o,dps*dt,dps*dt/perB());
   if(S.boss&&S.boss.z>reach-1.5&&Math.abs(px)<4)S.boss.hp-=dps*dt;
@@ -355,7 +355,7 @@ function weaponsUpdate(dt,R){if(!S.w)S.w={laser:0,flame:0,missile:0};const W=S.w
  for(const m of S.missiles){m.t-=dt;if(!m.tg||(m.tg.e&&m.tg.e.dead)||(m.tg.o&&m.tg.o.dead)){tl=tl||targets();let best=null,bd=1e9;for(const c of tl){const d=Math.hypot(c.x-m.x,c.z-m.z);if(d<bd){bd=d;best=c;}}m.tg=best;}
   const t=m.tg;if(t){const tx=t.e?t.e.x:t.o?t.o.x:t.x,tz=t.e?t.e.z:t.o?t.o.z+0.75:S.boss?S.boss.z+1:t.z,dx=tx-m.x,dz=tz-m.z,d=Math.hypot(dx,dz)||1;
    m.vx+=(dx/d*28-m.vx)*Math.min(1,dt*6);m.vz+=(dz/d*28-m.vz)*Math.min(1,dt*6);
-   if(d<0.8){const dmg=base*Math.max(0.35,1.3-W.missile*0.15)*1.5/Math.min(5,W.missile);for(const e of S.enemies)if(Math.hypot(e.x-tx,e.z-tz)<1.6)hurtEnemy(e,dmg);
+   if(d<0.8){const dmg=base*Math.max(0.35,1.3-W.missile*0.15)*0.5/Math.min(5,W.missile);for(const e of S.enemies)if(Math.hypot(e.x-tx,e.z-tz)<1.6)hurtEnemy(e,dmg);
     for(const o of S.objs)if(o.type=='barrel'&&Math.abs(o.x-tx)<LW/2&&Math.abs(o.z+0.75-tz)<1.6)hurtObj(o,dmg,0);if(t.boss&&S.boss)S.boss.hp-=dmg;
     burst(tx,tz,12,1);ring(tx,tz,2.2,0xffd0a0);m.t=0;}}
   m.vy-=6*dt;m.x+=m.vx*dt;m.z+=m.vz*dt;m.y=Math.max(0.6,m.y+m.vy*dt);if(Math.random()<.5&&S.parts.length<480)S.parts.push({x:m.x,y:m.y,z:m.z+0.3,vx:0,vy:0.5,vz:1,t:.2});}

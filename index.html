@@ -12,7 +12,7 @@ html,body{height:100%;overscroll-behavior:none}
 /* while a game is open the page itself never scrolls, so in-app browsers (KakaoTalk) do not collapse/expand their toolbar mid-game */
 body.playing{overflow:hidden;position:fixed;inset:0;touch-action:none}
 #play{height:100%;height:100dvh}
-#kakao{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:#fee500;color:#191600;border-radius:12px;padding:10px 14px;font-size:14px}
+#kakao{display:flex;justify-content:flex-end}
 #kakao[hidden]{display:none}
 #kakao a{background:#191600;color:#fee500;text-decoration:none;font-weight:700;border-radius:8px;padding:8px 12px;white-space:nowrap}
 body{background:var(--bg);color:var(--fg);font-family:var(--body);margin:0}
@@ -76,7 +76,7 @@ iframe{flex:1;border:0;width:100%;background:#000}
 </style>
 
 <div id="home">
- <div id="kakao" hidden><span>카카오톡 안에서는 화면이 커졌다 작아졌다 할 수 있어요. 기본 브라우저에서 열면 전체화면으로 쾌적해요.</span><a id="kakaoOpen" href="#">브라우저로 열기</a></div>
+ <div id="kakao" hidden><a id="kakaoOpen" href="#">브라우저로 열기</a></div>
  <header><h1>똥겜 <span>오락실</span></h1><div class="credit">INSERT COIN · CREDIT <b>04</b></div></header>
  <div class="grid" id="grid"></div>
  <section id="hall">
@@ -140,6 +140,7 @@ addEventListener('message',e=>{const d=e.data;if(!d||d.type!=='arcade-score'||!R
  document.getElementById('recDetail').textContent=(d.detail||'')+(r<0?' · TOP 10 밖이에요':'');
  document.getElementById('recEntry').hidden=r<0;
  document.getElementById('recBoard').innerHTML=boardHTML(d.game);recGame=d.game;
+ document.getElementById('recClose').textContent=r>=0?'저장 안 함':'닫기';
  rec.hidden=false;if(r>=0){ini.value='';setTimeout(()=>ini.focus(),50);}});
 ini.addEventListener('input',()=>{ini.value=ini.value.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,3);});
 let recGame=null,saving=false;
@@ -151,7 +152,7 @@ document.getElementById('recBox').addEventListener('submit',async e=>{e.preventD
   catch(err){title.textContent='저장 실패 — 잠시 후 다시 눌러주세요';saving=false;document.getElementById('recSave').disabled=false;return;}
   saving=false;document.getElementById('recSave').disabled=false;}
  else{const l=hof[p.game]||[];l.splice(at,0,{...row,t:Date.now()});hof[p.game]=l.slice(0,10);saveHof(hof);}
- document.getElementById('recEntry').hidden=true;title.textContent=`${at+1}위 저장 완료!`;
+ document.getElementById('recEntry').hidden=true;title.textContent=`${at+1}위 저장 완료!`;document.getElementById('recClose').textContent='닫기';
  document.getElementById('recBoard').innerHTML=boardHTML(p.game,FB?-1:at);tab=p.game;renderHall();pending=null;document.getElementById('recClose').focus();});
 document.getElementById('recClose').onclick=()=>{rec.hidden=true;pending=null;recGame=null;frame.focus();};
 

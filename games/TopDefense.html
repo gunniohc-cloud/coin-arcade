@@ -84,12 +84,12 @@ function reset(go){S={started:!!go,gold:90,wave:1,castle:300,castleMax:300,lordD
  units:[],enemies:[],shots:[],fx:[],boulders:[],pools:[],items:[],bombs:1,spawnLeft:0,spawnT:0,waveT:1,over:false,paused:false,kills:0,shake:0,t:0,
  lv:{dmg:0,rate:0,wall:0,multi:0,tarch:0,uatk:0,uhp:0},lordAim:0,waveBonus:0};S.spawnLeft=8+S.wave*4;S.eliteAt=Math.ceil(S.spawnLeft/2);}
 function spawnEnemy(){const w=S.wave,bossN=Math.floor(w/5),boss=w%5==0&&(S.spawnLeft==1||(bossN>=2&&S.spawnLeft==S.eliteAt)||(bossN>=4&&S.spawnLeft==Math.ceil(S.eliteAt*1.6))),r=Math.random(); /* every 5th wave a boss; from wave 10 two, from wave 20 three */
- let e={x:W+20,y:TOP+Math.random()*(BOT-TOP),hp:26+w*12+w*w*.6,spd:40+Math.random()*18,dmg:6+w*1.5,range:20,rate:1,t:0,kind:'grunt',r:13,gold:Math.round((4+(w>>1))*1.3),pend:0,walk:Math.random()*9};
+ let e={x:W+20,y:TOP+Math.random()*(BOT-TOP),hp:26+w*12+w*w*.35,spd:40+Math.random()*18,dmg:6+w*1.5,range:20,rate:1,t:0,kind:'grunt',r:13,gold:Math.round((4+(w>>1))*1.3),pend:0,walk:Math.random()*9};
  if(r<.25&&w>2){e.hp*=.6;e.spd*=1.8;e.kind='runner';e.r=11;}
  else if(r<.4&&w>3){e.hp*=2.5;e.spd*=.6;e.kind='brute';e.r=18;e.gold*=2;}
  // elite mid-boss: one per wave (from wave 2), drops a bomb when killed
  if(!boss&&w>=2&&S.spawnLeft==S.eliteAt){e.hp*=7;e.spd=26;e.r=22;e.kind='elite';e.dmg*=2.5;e.gold*=6;}
- if(boss){const g=1+0.45*(bossN-1);e.hp=(26+w*12+w*w*.6)*18*g*g;e.spd=22+bossN*1.5;e.r=Math.min(46,30+bossN*3);e.kind='boss';e.dmg*=4*g;e.gold=80*bossN;e.tier=bossN;}
+ if(boss){const g=1+0.3*(bossN-1);e.hp=(26+w*12+w*w*.35)*18*g*g;e.spd=22+bossN*1.5;e.r=Math.min(46,30+bossN*3);e.kind='boss';e.dmg*=4*g;e.gold=80*bossN;e.tier=bossN;}
  e.max=e.hp;S.enemies.push(e);}
 const alive=e=>e.hp>0;
 // nearest enemy that isn't already doomed by arrows in flight
@@ -399,7 +399,7 @@ let superShots=[];
 function endDrag(ev,forceCancel){if(!drag)return;const d=drag;drag=null;try{cv.releasePointerCapture(ev.pointerId)}catch(e){}
  if(forceCancel||d.cancel||S.over||S.paused)return;
  const [lx,ly]=P(...lordPos());let dx=d.x-lx,dy=d.y-ly;const L=Math.hypot(dx,dy)||1;dx/=L;dy/=L;
- S.bombs--;superShots.push({x:lx,y:ly,dx,dy,t:0,hit:new Set(),trail:[],dmg:150+S.lordDmg*8});SFX.ding();S.shake=Math.max(S.shake,8);}
+ S.bombs--;superShots.push({x:lx,y:ly,dx,dy,t:0,hit:new Set(),trail:[],dmg:400+S.lordDmg*20});SFX.ding();S.shake=Math.max(S.shake,8);}
 cv.addEventListener('pointerup',ev=>endDrag(ev,false));
 cv.addEventListener('pointercancel',ev=>endDrag(ev,true));
 function wrld(sx,sy){const [x,y]=unP(sx,sy);return {x,y};}

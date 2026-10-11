@@ -180,9 +180,9 @@ function applyOp(o){if(!o)return;if(o.t=='-'||o.t=='/')SFX.bad();else if(o.t=='d
  else if(o.t=='dmg')S.dmg+=0.5;else S.rate=Math.max(0.08,S.rate*0.8);}
 // enemy group in one lane. HP is tuned to the army's current firepower so wiping a group takes
 // most of the approach window: you can either hold that lane and shoot, or grab the gate on the other side — not both.
-function spawnEnemies(lane,z0){z0=z0||SPAWN_Z;const n=Math.min(60,6+S.stage*2+Math.floor(Math.random()*3));
+function spawnEnemies(lane,z0){z0=z0||SPAWN_Z;const gl=gateLevel(),n=Math.min(80,6+S.stage*2+gl*2+Math.floor(Math.random()*3));
  const vol=Math.max(1,Math.min(S.count,25)),dps=vol*S.dmg*Math.max(1,S.count/25)/S.rate;
- let hp=Math.max(1+S.stage*0.6,dps*2.4/n);if(S.stage==1&&S.dist<110)hp*=0.6;
+ let hp=Math.max(1+S.stage*0.6,dps*3.6/n)*(1+0.3*(gl-1)); /* aim assist wastes few bullets, and bigger gates mean a bigger army: scale up */if(S.stage==1&&S.dist<110)hp*=0.6;
  const cx=lane==null?(Math.random()*2-1)*(ROAD-1.5):LX[lane],lo=lane==null?-ROAD:LX[lane]-LW/2+0.35,hi=lane==null?ROAD:LX[lane]+LW/2-0.35;
  for(let i=0;i<n;i++){const a=i*2.4,r=0.35*Math.sqrt(i);S.enemies.push({x:Math.max(lo,Math.min(hi,cx+Math.cos(a)*r)),z:z0+Math.sin(a)*r,hp,max:hp});}}
 // encounter = a good gate on one side + an enemy group on the other side, arriving together
@@ -221,7 +221,7 @@ function laneOf(x){return x<-LW/2?0:x<LW/2?1:2;}
 function spawnWave(){S.gatesN++;const fp=firepower(),both=S.gatesN>2&&Math.random()<0.4,first=Math.random()<0.5?0:1;
  (both?[0,1]:[first]).forEach(l=>{
   const rw=Math.random()<.1&&S.count<80?REWARDS[3]:REWARDS[Math.floor(Math.random()*3)];
-  makeBarrel(l,SPAWN_Z,Math.max(6,fp*(1.4+Math.random()*0.8)),rw);   // the item is the squad's shield: break it to reach them (and keep the item)
+  makeBarrel(l,SPAWN_Z,Math.max(6,fp*(1.8+Math.random()*0.8))*(1+0.25*(gateLevel()-1)),rw);   // the item is the squad's shield: break it to reach them (and keep the item)
   spawnEnemies(l,SPAWN_Z-3.5);});}
 function spawnRow(){S.gatesN++;const z=-90,ez=-90-2.5*(90/S.speed),fp=firepower(),st=S.stage;
  const gateV=()=>-(3+Math.floor(Math.random()*(4+st*3)));
@@ -261,7 +261,7 @@ function miniMesh(){let m=miniPool.find(o=>!o.visible);if(m){m.visible=true;retu
  const club=new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.25,1.6,8),new THREE.MeshStandardMaterial({color:0x6b4a2a}));club.position.set(1,1.4,0.2);club.rotation.z=-0.5;m.add(club);m.userData.club=club;
  const bar=new THREE.Mesh(new THREE.PlaneGeometry(1.6,0.14),new THREE.MeshBasicMaterial({color:0xff3333}));bar.position.y=3.1;m.add(bar);m.userData.bar=bar;
  scene.add(m);miniPool.push(m);return m;}
-function spawnMini(){const vol=Math.max(1,Math.min(S.count,25)),dps=vol*S.dmg*Math.max(1,S.count/25)/S.rate,hp=20+S.stage*25+dps*2.2;S.enemies.push({x:(Math.random()*2-1)*(ROAD-1.5),z:SPAWN_Z,hp,max:hp,mini:1,mesh:miniMesh()});flash('⚠ 중간보스 출현!');}
+function spawnMini(){const vol=Math.max(1,Math.min(S.count,25)),dps=vol*S.dmg*Math.max(1,S.count/25)/S.rate,hp=(20+S.stage*25+dps*3.2)*(1+0.3*(gateLevel()-1));S.enemies.push({x:(Math.random()*2-1)*(ROAD-1.5),z:SPAWN_Z,hp,max:hp,mini:1,mesh:miniMesh()});flash('⚠ 중간보스 출현!');}
 let flashT=0;function flash(t){const el=document.getElementById('flash');el.textContent=t;el.style.opacity=1;flashT=1.2;}
 // soldier formation offsets (spiral)
 const form=[];for(let i=0;i<MAXS;i++){const a=i*2.39996,r=0.32*Math.sqrt(i);/* tall ellipse that grows backward (narrow side to side, so a big army can still partly dodge a barrel) */form.push([Math.cos(a)*r*0.6,Math.sin(a)*r*1.3-r*0.5]);}
@@ -296,6 +296,7 @@ function buildAim(){const lane=laneOf(S.px),c=[];
  for(const o of S.objs)if(!o.dead&&!o.done&&o.lane==lane&&o.z<0&&o.z>-46)c.push({x:o.type=='gate'?LX[lane]:o.x,z:o.type=='gate'?o.z:o.z+0.75});
  if(S.boss&&S.boss.z>-46&&lane==1)c.push({x:0,z:S.boss.z+1});
  c.sort((a,b)=>b.z-a.z);return c;}
+function gateLevel(){return 1+Math.floor(S.gatesN/4)+(S.stage-1);}
 function pickAim(){const c=aimList;if(!c.length)return null;if(c.length<=3)return c[0];return c[Math.floor(Math.random()*Math.min(c.length,8))];}
 function update(dt){
  if(flashT>0){flashT-=dt;if(flashT<=0)document.getElementById('flash').style.opacity=0;}
@@ -306,13 +307,13 @@ function update(dt){
  // spawning
  if(!S.boss&&inStage<S.stageLen){
   if(S.dist>S.nextGate){spawnWave();S.nextGate=S.dist+24+Math.random()*8;}
-  if(S.dist>S.nextR){makeGate(2,SPAWN_Z,1+Math.floor(S.gatesN/4)+(S.stage-1));S.nextR=S.dist+6;} // endless conveyor of reinforcement gates
+  if(S.dist>S.nextR){makeGate(2,SPAWN_Z,gateLevel());S.nextR=S.dist+6;} // endless conveyor of reinforcement gates
   if(S.dist>S.nextMini){spawnMini();S.nextMini=Infinity;S.nextGate=Math.max(S.nextGate,S.dist+45);}}
- if(!S.boss&&inStage>=S.stageLen+60&&!S.enemies.length){S.boss={z:-36,hp:(()=>{const v=Math.max(1,Math.min(S.count,25));return 80+S.stage*60+v*S.dmg*Math.max(1,S.count/25)/S.rate*7;})(),max:0,t:0};S.boss.max=S.boss.hp;boss.visible=true;bb.style.display='block';SFX.boss();
+ if(!S.boss&&inStage>=S.stageLen+60&&!S.enemies.length){S.boss={z:-36,hp:(()=>{const v=Math.max(1,Math.min(S.count,25));return (80+S.stage*60+v*S.dmg*Math.max(1,S.count/25)/S.rate*9)*(1+0.3*(gateLevel()-1));})(),max:0,t:0};S.boss.max=S.boss.hp;boss.visible=true;bb.style.display='block';SFX.boss();
   S.gates.forEach(g=>scene.remove(g.mesh));S.gates=[];S.objs.forEach(removeObj);S.objs=[];S.bd=0;S.nextBR=0;S.nextBS=12;}
  // during the boss fight the conveyor keeps running: reinforcement gates on the right, a special item on the left
  if(S.boss){S.bd+=S.speed*dt;
-  if(S.bd>S.nextBR){makeGate(2,SPAWN_Z,1+Math.floor(S.gatesN/4)+(S.stage-1));S.nextBR=S.bd+6;}
+  if(S.bd>S.nextBR){makeGate(2,SPAWN_Z,gateLevel());S.nextBR=S.bd+6;}
   if(S.bd>S.nextBS){makeBarrel(0,SPAWN_Z,Math.max(10,firepower()*2.4),SPECIALS[Math.floor(Math.random()*SPECIALS.length)]);S.nextBS=S.bd+30;}}
  // gates
  for(const g of S.gates){g.z+=mv;g.mesh.position.z=g.z;

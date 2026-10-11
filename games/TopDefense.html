@@ -60,7 +60,7 @@ const SFX={
  boom:()=>{noise(.7,.5,300,0.6,0,-220);tone(70,.6,'sawtooth',.35,-30);},
  // the ultimate's 'ding': a bright metallic ring with long decay, over a deep thump and a rushing whoosh
  /* catapult launch: wooden arm thunk, then an air whoosh that follows the stone; fire pots add a roaring, crackling blaze */
- fling:(dur,fire)=>{tone(80,.2,'triangle',.55,-35);noise(.1,.4,260,1.2);for(let i=0;i<4;i++){const k=i/3;noise(.34,.12+.08*Math.sin(k*Math.PI),380+k*350,0.8,dur*k*0.85,-160);}
+ fling:(dur,fire)=>{tone(80,.2,'triangle',.55,-35);noise(.1,.4,260,1.2);
   }, /* boulder landing: hard stone crack plus scattering gravel; fire pots also burst into flame */
  rock:fire=>{tone(70,.38,'sine',.85,-30);tone(105,.24,'triangle',.55,-50);noise(.12,.8,700,1.1);noise(.25,.65,380,0.9,0,-150);
   for(let i=0;i<7;i++)noise(.05+Math.random()*.06,.17+Math.random()*.14,500+Math.random()*900,1.6,.04+Math.random()*.3);

@@ -181,8 +181,8 @@ function catFire(u){let best=null,bs=-1;
  for(const e of S.enemies){const d=Math.hypot(e.x-u.x,e.y-u.y);if(d>u.range||d<130||e.hp-e.pend<=0)continue;let n=0;for(const o of S.enemies)if(Math.hypot(o.x-e.x,o.y-e.y)<60)n++;
   const sc=n*10-d*0.01+(e.x<u.x+200?5:0);if(sc>bs){bs=sc;best=e;}}
  if(!best)return false;const tr=u.track||'',lv=u.tl||0,lead=best.spd*0.9,base=u.dmg*S.uAtk;
- const dmg=tr=='rock'?base*(1+0.7*lv):tr=='fire'?base*(1+0.12*lv):base;
- S.boulders.push({x:u.x,y:u.y,sx:u.x,sy:u.y,tx:best.x-lead,ty:best.y,t:0,dur:0.9,tr,lv,dmg,R:55+(tr=='rock'?lv*7:lv*4),pool:tr=='fire'?{dps:base*(0.35+0.25*lv),life:2.5+lv*0.6,R:45+lv*8}:null});u.atk=1;SFX.sword();return true;}
+ const dmg=tr=='rock'?base*(1+0.9*lv):tr=='fire'?base*(1+0.12*lv):base;
+ S.boulders.push({x:u.x,y:u.y,sx:u.x,sy:u.y,tx:best.x-lead,ty:best.y,t:0,dur:0.9,tr,lv,dmg,R:55+(tr=='rock'?lv*7:lv*4),pool:tr=='fire'?{dps:base*(0.2+0.14*lv),life:2.5+lv*0.6,R:45+lv*8}:null});u.atk=1;SFX.sword();return true;}
 function catUpdate(dt){
  for(const b of S.boulders){b.t+=dt;const k=Math.min(1,b.t/b.dur);b.x=b.sx+(b.tx-b.sx)*k;b.y=b.sy+(b.ty-b.sy)*k;b.h=Math.sin(k*Math.PI)*(90+b.lv*8);
   if(b.tr=='fire'&&Math.random()<0.6)S.fx.push({x:b.x,y:b.y,vx:(Math.random()-.5)*30,vy:-20-Math.random()*30,t:.3,part:Math.random()<.5?'#ff8a20':'#ffd040'});

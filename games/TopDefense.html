@@ -61,7 +61,9 @@ const SFX={
  // the ultimate's 'ding': a bright metallic ring with long decay, over a deep thump and a rushing whoosh
  /* catapult launch: wooden arm thunk, then an air whoosh that follows the stone; fire pots add a roaring, crackling blaze */
  fling:(dur,fire)=>{tone(95,.14,'triangle',.35,-45);noise(.08,.25,300,1.2);for(let i=0;i<4;i++){const k=i/3;noise(.32,.07+.05*Math.sin(k*Math.PI),500+k*500,0.8,dur*k*0.85,-200);}
-  if(fire){for(let i=0;i<Math.ceil(dur/0.35);i++)noise(.4,.1,260,0.6,i*0.35,-80);for(let i=0;i<14;i++)noise(.03+Math.random()*.03,.12+Math.random()*.1,1800+Math.random()*2500,2,Math.random()*dur);}}, ding:()=>{const f0=110;[[1,.55,4.2],[2.0,.24,3.4],[2.42,.15,2.8],[3.0,.09,2.2],[0.5,.35,4.6]].forEach(([m,v,d])=>tone(f0*m,d,'sine',v));tone(f0*1.004,4.0,'sine',.28);tone(f0*0.5*1.003,4.4,'triangle',.18);tone(38,.9,'sine',.7,-8);noise(.5,.15,600,1,0.02,-450);},
+  if(fire){for(let i=0;i<Math.ceil(dur/0.35);i++)noise(.4,.1,260,0.6,i*0.35,-80);for(let i=0;i<14;i++)noise(.03+Math.random()*.03,.12+Math.random()*.1,1800+Math.random()*2500,2,Math.random()*dur);}}, /* boulder landing: hard stone crack plus scattering gravel; fire pots also burst into flame */
+ rock:fire=>{noise(.05,.35,2600,1.5);noise(.09,.28,1200,1.2);tone(140,.07,'triangle',.18,-60);for(let i=0;i<9;i++)noise(.02+Math.random()*.04,.06+Math.random()*.1,1500+Math.random()*3500,2.5,.03+Math.random()*.35);
+  if(fire){noise(.35,.22,700,0.7,0,-400);for(let i=0;i<8;i++)noise(.03,.1,2000+Math.random()*2000,2,.05+Math.random()*.5);}}, ding:()=>{const f0=110;[[1,.55,4.2],[2.0,.24,3.4],[2.42,.15,2.8],[3.0,.09,2.2],[0.5,.35,4.6]].forEach(([m,v,d])=>tone(f0*m,d,'sine',v));tone(f0*1.004,4.0,'sine',.28);tone(f0*0.5*1.003,4.4,'triangle',.18);tone(38,.9,'sine',.7,-8);noise(.5,.15,600,1,0.02,-450);},
  coin:()=>tone(1300,.07,'triangle',.12),
  pick:()=>{tone(700,.08,'square',.1,500);tone(1050,.08,'square',.06,0,.06);},
  horn:()=>{[0,.18,.36].forEach((t,i)=>tone([220,277,330][i],.32,'sawtooth',.09,0,t));},
@@ -188,7 +190,7 @@ function catFire(u){let best=null,bs=-1;
 function catUpdate(dt){
  for(const b of S.boulders){b.t+=dt;const k=Math.min(1,b.t/b.dur);b.x=b.sx+(b.tx-b.sx)*k;b.y=b.sy+(b.ty-b.sy)*k;b.h=Math.sin(k*Math.PI)*(90+b.lv*8);
   if(b.tr=='fire'&&Math.random()<0.6)S.fx.push({x:b.x,y:b.y,vx:(Math.random()-.5)*30,vy:-20-Math.random()*30,t:.3,part:Math.random()<.5?'#ff8a20':'#ffd040'});
-  if(k>=1&&!b.done){b.done=1;SFX.boom();S.shake=Math.max(S.shake,b.tr=='rock'?4+b.lv*2:3);
+  if(k>=1&&!b.done){b.done=1;once('rock',90,()=>SFX.rock(b.tr=='fire'));S.shake=Math.max(S.shake,b.tr=='rock'?4+b.lv*2:3);
    for(const e of [...S.enemies]){const d=Math.hypot(e.x-b.x,e.y-b.y);if(d<b.R)hit(e,b.dmg*(d<b.R*0.4?1:0.6));}
    if(b.pool)S.pools.push({x:b.x,y:b.y,R:b.pool.R,t:b.pool.life,life:b.pool.life,dps:b.pool.dps});
    S.fx.push({x:b.x,y:b.y,r:b.R,t:.6});for(let i=0;i<8+b.lv*3;i++)S.fx.push({x:b.x,y:b.y,vx:(Math.random()-.5)*220,vy:-Math.random()*180,t:.5,part:b.tr=='fire'?(i%2?'#ff7a1a':'#ffd040'):'#8a8270'});}}

@@ -34,7 +34,7 @@ body.port #ui{width:100%!important;grid-template-columns:repeat(5,minmax(0,1fr))
 body.port #ui .sep{display:none}
 body.port #ui button{grid-template-columns:1fr;justify-items:center;text-align:center;gap:0;padding:3px 1px!important;font-size:10px!important}
 body.port #ui button i{font-size:14px}body.port #ui button b{font-size:10px}
-</style></head><body>
+#ui button *{pointer-events:none}</style></head><body>
 <div id="stage"><canvas id="c" width="1000" height="480"></canvas></div>
 <div id="ui"></div>
 <div id="info">1~3 소환 · Q W E R T Y 업그레이드 · 필살 화살 버튼을 드래그해서 조준 (웨이브마다 1발) · P 일시정지</div>
@@ -327,7 +327,7 @@ UNITS.forEach(u=>{const b=document.createElement('button');ui.appendChild(b);
   b.addEventListener('pointerup',ev=>{if(!tdrag)return;towerMove(ev);const d=tdrag;tdrag=null;if(d.ok&&S.gold>=u.cost&&!S.over)placeTower(u,d.wx,d.wy);});
   b.addEventListener('pointercancel',()=>tdrag=null);}
  else b.onclick=()=>summon(u);
- btns.push(()=>{b.innerHTML=`<i>${u.ic}</i><span>${u.name}</span><b>${u.cost}G</b>`;b.disabled=(S.gold<u.cost||S.over)&&!(tdrag&&tdrag.t==u);});});
+ btns.push(()=>{{const h=`<i>${u.ic}</i><span>${u.name}</span><b>${u.cost}G</b>`;if(b._h!==h){b._h=h;b.innerHTML=h;}}b.disabled=(S.gold<u.cost||S.over)&&!(tdrag&&tdrag.t==u);});});
 // ---------- tower: drag from its button onto the field in front of the wall ----------
 let tdrag=null;const TZ={x0:CX+25,x1:CX+420};
 function towerMove(ev){const p=evPos(ev),[wx,wy]=unP(p.x,p.y);Object.assign(tdrag,{x:p.x,y:p.y,out:p.out,wx,wy});
@@ -342,7 +342,7 @@ function drawTowerDrag(){if(!tdrag)return;g.save();
  g.restore();}
 const h2=document.createElement('h4');h2.textContent='업그레이드';ui.appendChild(h2);{const s=document.createElement('div');s.className='sep';ui.appendChild(s);}
 UPS.forEach(u=>{const b=document.createElement('button');b.onclick=()=>upgrade(u);ui.appendChild(b);btns.push(()=>{const l=S.lv[u.lv],mx=l>=u.max,c=mx?0:u.cost(l);
- b.innerHTML=`<i>${u.ic}</i><span>${u.label?u.label(l):u.sh+' '+l}</span><b>${mx?'MAX':c+'G'}</b>`;b.title=u.name+' ['+u.key.toUpperCase()+']';b.disabled=mx||S.gold<c||S.over;});});
+ {const h=`<i>${u.ic}</i><span>${u.label?u.label(l):u.sh+' '+l}</span><b>${mx?'MAX':c+'G'}</b>`;if(b._h!==h){b._h=h;b.innerHTML=h;}}b.title=u.name+' ['+u.key.toUpperCase()+']';b.disabled=mx||S.gold<c||S.over;});});
 function summon(t){au();if(t.fixed){S.fx.push({x:CX+120,y:TOP+40,t:1,txt:'🗼 타워는 버튼을 드래그해서 배치',col:'#ffd27a'});return;}if(S.over||S.gold<t.cost)return;S.gold-=t.cost;S.units.push({...t,base:t,dmg:t.dmg*S.uAtk,hp:t.hp*S.uHp,max:t.hp*S.uHp,x:CX+30,y:TOP+Math.random()*(BOT-TOP),t:0,walk:0,atk:0,face:1});SFX.coin();}
 function upgrade(u){au();const l=S.lv[u.lv];if(l>=u.max)return;const c=u.cost(l);if(S.over||S.gold<c)return;S.gold-=c;S.lv[u.lv]++;u.apply();SFX.pick();}
 // ---------- bomb: drag from the bomb button, preview the blast, release to drop ----------
@@ -448,7 +448,7 @@ let menuPaused=false;addEventListener("message",e=>{const d=e.data;if(!d||d.type
  if(d.cmd=="pause"&&!S.paused&&!S.over){S.paused=true;menuPaused=true;}
  if(d.cmd=="resume"&&menuPaused){menuPaused=false;S.paused=false;}});
 reset();setMode();fit();addEventListener("resize",()=>{setMode();fit();});requestAnimationFrame(loop);
-</script><style>/* no long-press text selection, callout menu or tap flash */*{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}input,textarea{-webkit-user-select:text;user-select:text}</style>
+</script><style>/* no long-press text selection, callout menu or tap flash */*{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}input,textarea{-webkit-user-select:text;user-select:text}#ui button *{pointer-events:none}</style>
 <script>addEventListener('contextmenu',e=>{if(!e.target.closest||!e.target.closest('input,textarea'))e.preventDefault();});addEventListener('selectstart',e=>{if(!e.target.closest||!e.target.closest('input,textarea'))e.preventDefault();});</script>
 <script>/* iOS suspends audio when the screen locks: resume it when we come back and on the next touch */(function(){const wake=()=>{try{if(typeof AC!=='undefined'&&AC&&AC.state!=='running')AC.resume();}catch(e){}};document.addEventListener('visibilitychange',()=>{if(!document.hidden)wake();});['pointerdown','touchend','keydown'].forEach(ev=>addEventListener(ev,wake,true));addEventListener('message',e=>{if(e.data&&e.data.type==='arcade-cmd'&&e.data.cmd==='resume')wake();});})();</script>
 </body></html>

@@ -199,7 +199,7 @@ function catUpdate(dt){
    S.fx.push({x:b.x,y:b.y,r:b.R,t:.6});for(let i=0;i<8+b.lv*3;i++)S.fx.push({x:b.x,y:b.y,vx:(Math.random()-.5)*220,vy:-Math.random()*180,t:.5,part:b.tr=='fire'?(i%2?'#ff7a1a':'#ffd040'):'#8a8270'});}}
  S.boulders=S.boulders.filter(b=>!b.done);
  // burning patches on the ground
- for(const e of S.enemies)e.fireN=0;for(const p of S.pools){p.t-=dt;for(const e of S.enemies)if(!e.dead&&Math.hypot(e.x-p.x,e.y-p.y)<p.R+e.r*0.5){e.slowT=0.15;e.fireN++;e.slowN=Math.max(e.fireN,e.fireN==1&&e.slowN>1&&e.slowT>0.1?1:e.fireN);e.hp-=p.dps*dt;if(Math.random()<0.08)S.fx.push({x:e.x,y:e.y-e.r*0.6,vx:0,vy:-40,t:.35,part:'#ff8a20'});if(e.hp<=0)kill(e);}}
+ for(const e of S.enemies)e.fireN=0;for(const p of S.pools){p.t-=dt;for(const e of S.enemies)if(!e.dead&&Math.hypot(e.x-p.x,e.y-p.y)<p.R+e.r*0.5){e.slowT=0.15;e.fireN++;e.slowN=e.fireN;e.hp-=p.dps*dt;if(Math.random()<0.08)S.fx.push({x:e.x,y:e.y-e.r*0.6,vx:0,vy:-40,t:.35,part:'#ff8a20'});if(e.hp<=0)kill(e);}}
  S.pools=S.pools.filter(p=>p.t>0);}
 function drawPools(){const tt=performance.now()/1000;for(const p of S.pools){const [sx,sy]=P(p.x,p.y),k=Math.min(1,p.t/0.6),R=p.R*(PORT?1.05:1);
  g.save();g.globalAlpha=0.55*k;const rg=g.createRadialGradient(sx,sy,2,sx,sy,R);rg.addColorStop(0,'#ffd040');rg.addColorStop(.5,'#ff6a10');rg.addColorStop(1,'#ff3a0000');g.fillStyle=rg;

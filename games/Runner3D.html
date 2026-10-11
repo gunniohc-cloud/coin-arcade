@@ -83,16 +83,51 @@ const soldierM=inst(new THREE.CylinderGeometry(0.17,0.22,0.7,10),0x2f7cf6,MAXS);
 const headM=inst(new THREE.SphereGeometry(0.17,12,10),0xffd9b0,MAXS);
 const helmM=inst(new THREE.SphereGeometry(0.19,12,8,0,Math.PI*2,0,Math.PI/2),0x1d4fb0,MAXS);
 const gunM=inst(new THREE.BoxGeometry(0.07,0.07,0.45),0x333333,MAXS);
-const enemyM=inst(new THREE.CylinderGeometry(0.22,0.26,0.8,10),0xe0402f,MAXE);
-const ehM=inst(new THREE.SphereGeometry(0.2,12,10),0x7a1a12,MAXE);
+// goblin grunts: instanced parts (tunic body, head, pointy ears, glowing eyes, walking legs, club)
+const G_SKIN=0x6aa84f;
+const enemyM=inst(new THREE.SphereGeometry(0.3,12,10),0x8a2a1a,MAXE);
+const ehM=inst(new THREE.SphereGeometry(0.22,12,10),G_SKIN,MAXE);
+const eEarM=inst(new THREE.ConeGeometry(0.07,0.28,6),G_SKIN,MAXE*2);
+const eEyeM=inst(new THREE.SphereGeometry(0.045,6,4),0xffee33,MAXE*2);eEyeM.material=new THREE.MeshBasicMaterial({color:0xffee33});eEyeM.castShadow=false;
+const eLegM=inst(new THREE.BoxGeometry(0.1,0.32,0.12),0x3a2a1a,MAXE*2);
+const eClubM=inst(new THREE.CylinderGeometry(0.05,0.11,0.6,6),0x6b4a2a,MAXE);
 const bulletM=inst(new THREE.CylinderGeometry(0.035,0.035,0.7,5),0xffee55,MAXB);bulletM.material=new THREE.MeshBasicMaterial({color:0xfff27a});bulletM.castShadow=false; // stretched tracer
 const flashM=inst(new THREE.SphereGeometry(0.13,6,4),0xfff2a0,MAXS);flashM.material=new THREE.MeshBasicMaterial({color:0xfff2a0,transparent:true,opacity:.9});flashM.castShadow=false; // muzzle flash
 const partM=inst(new THREE.BoxGeometry(0.14,0.14,0.14),0xff7a30,400);partM.material=new THREE.MeshBasicMaterial({color:0xffa040});partM.castShadow=false; // hit sparks
 function burst(x,z,n,y){for(let i=0;i<(n||6);i++)if(S.parts.length<400)S.parts.push({x,y:y||0.6,z,vx:(Math.random()-.5)*5,vy:2+Math.random()*4,vz:(Math.random()-.5)*5,t:.5});}
-// boss
-const boss=new THREE.Group();{const b=new THREE.Mesh(new THREE.BoxGeometry(2.4,3,2),new THREE.MeshLambertMaterial({color:0x5a1010}));b.position.y=1.5;b.castShadow=true;boss.add(b);
- const h=new THREE.Mesh(new THREE.BoxGeometry(1.4,1.2,1.4),new THREE.MeshLambertMaterial({color:0x991f1f}));h.position.y=3.6;boss.add(h);}
+// boss: ogre king with crown, tusks, horns and a spiked mace on a swinging arm
+const boss=new THREE.Group();{
+ const skin=new THREE.MeshStandardMaterial({color:0x8a3020,roughness:.6}),dark=new THREE.MeshStandardMaterial({color:0x3a1a10,roughness:.8}),
+  bone=new THREE.MeshStandardMaterial({color:0xfff2d0}),gold=new THREE.MeshStandardMaterial({color:0xffc93c,metalness:.7,roughness:.3}),steel=new THREE.MeshStandardMaterial({color:0xaaaaaa,metalness:.8,roughness:.3});
+ const add=(geo,mat,x,y,z,parent)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);m.castShadow=true;(parent||boss).add(m);return m;};
+ add(new THREE.SphereGeometry(1.5,20,16),skin,0,2.4,0).scale.set(1,1.1,0.85);
+ add(new THREE.SphereGeometry(1.1,16,12),new THREE.MeshStandardMaterial({color:0xc06040}),0,2.1,0.55).scale.set(1,0.9,0.6);
+ const belt=add(new THREE.TorusGeometry(1.35,0.14,8,24),dark,0,1.55,0);belt.rotation.x=Math.PI/2;add(new THREE.BoxGeometry(0.5,0.4,0.2),gold,0,1.55,1.3);
+ [-1,1].forEach(d=>{boss.userData['leg'+d]=add(new THREE.CylinderGeometry(0.45,0.55,1.3,10),skin,d*0.7,0.65,0);});
+ const head=new THREE.Group();head.position.set(0,4.15,0.2);boss.add(head);boss.userData.head=head;
+ add(new THREE.SphereGeometry(0.85,16,12),skin,0,0,0,head);
+ add(new THREE.BoxGeometry(1.1,0.35,0.5),dark,0,-0.45,0.55,head);
+ [-1,1].forEach(d=>{add(new THREE.ConeGeometry(0.12,0.4,6),bone,d*0.32,-0.25,0.8,head).rotation.x=Math.PI;
+  add(new THREE.ConeGeometry(0.2,0.9,8),bone,d*0.62,0.6,0,head).rotation.z=-d*0.6;
+  add(new THREE.SphereGeometry(0.13,8,6),new THREE.MeshBasicMaterial({color:0xffee33}),d*0.3,0.15,0.75,head);
+  add(new THREE.BoxGeometry(0.34,0.07,0.05),dark,d*0.3,0.34,0.78,head).rotation.z=d*0.35;});
+ add(new THREE.CylinderGeometry(0.55,0.62,0.35,10,1,true),gold,0,0.82,0,head);
+ for(let k=0;k<6;k++){const a=k/6*Math.PI*2;add(new THREE.ConeGeometry(0.1,0.3,5),gold,Math.cos(a)*0.56,1.1,Math.sin(a)*0.56,head);}
+ [-1,1].forEach(d=>{const arm=new THREE.Group();arm.position.set(d*1.55,3.1,0);boss.add(arm);boss.userData['arm'+d]=arm;
+  add(new THREE.CylinderGeometry(0.35,0.42,1.8,10),skin,0,-0.9,0,arm);add(new THREE.SphereGeometry(0.45,10,8),skin,0,-1.85,0,arm);
+  if(d>0){add(new THREE.CylinderGeometry(0.12,0.12,1.6,8),dark,0,-2.0,0.75,arm).rotation.x=Math.PI/2;
+   const ball=add(new THREE.SphereGeometry(0.55,12,10),dark,0,-2.0,1.65,arm);
+   for(let k=0;k<10;k++){const sp=new THREE.Mesh(new THREE.ConeGeometry(0.1,0.35,6),steel);const a=k/10*Math.PI*2,b=(k%2)*0.6-0.3;
+    sp.position.set(Math.cos(a)*0.55,Math.sin(a)*0.55,b);sp.lookAt(Math.cos(a)*2,Math.sin(a)*2,b*3);sp.rotateX(Math.PI/2);ball.add(sp);}}});}
 boss.visible=false;scene.add(boss);
+let camBase=null,shake=0;
+function animateBoss(){if(!S.boss){boss.rotation.set(0,0,0);return;}const B=S.boss,a=(B.atk||0)/1.2,tt=performance.now()/1000,ud=boss.userData,moving=B.z<-crowdR()-1.3;
+ // wind-up (raise the mace), slam, recover
+ const sw=a<0.7?-2.6*(a/0.7):a<0.85?-2.6+3.9*((a-0.7)/0.15):1.3-1.3*((a-0.85)/0.15);
+ ud.arm1.rotation.x=B.atk?sw:Math.sin(tt*2)*0.2;ud['arm-1'].rotation.x=Math.sin(tt*2+1)*0.25-(B.atk?0.4:0);
+ ud.head.rotation.x=B.atk&&a<0.7?-0.25:Math.sin(tt*3)*0.06;ud.head.rotation.y=Math.sin(tt*1.3)*0.2;
+ const step=moving?Math.sin(tt*5):0;ud.leg1.rotation.x=step*0.4;ud['leg-1'].rotation.x=-step*0.4;
+ boss.position.y=moving?Math.abs(step)*0.12:0;boss.rotation.x=B.atk&&a>0.7&&a<0.9?0.12:0;}
 
 function textTex(txt,bg){const c=document.createElement('canvas');c.width=256;c.height=128;const x=c.getContext('2d');
  x.fillStyle=bg;x.fillRect(0,0,256,128);x.fillStyle='#fff';x.font='bold 64px "Malgun Gothic"';x.textAlign='center';x.textBaseline='middle';x.fillText(txt,128,68);
@@ -195,7 +230,7 @@ function miniMesh(){let m=miniPool.find(o=>!o.visible);if(m){m.visible=true;retu
  const head=new THREE.Mesh(new THREE.SphereGeometry(0.5,14,10),skin);head.position.y=2.25;head.castShadow=true;m.add(head);
  const hornM=new THREE.MeshStandardMaterial({color:0xfff2d0});[-1,1].forEach(d=>{const h=new THREE.Mesh(new THREE.ConeGeometry(0.12,0.45,8),hornM);h.position.set(d*0.32,2.65,0);h.rotation.z=-d*0.4;m.add(h);});
  const eyeM=new THREE.MeshBasicMaterial({color:0xffee33});[-1,1].forEach(d=>{const e=new THREE.Mesh(new THREE.SphereGeometry(0.08,8,6),eyeM);e.position.set(d*0.18,2.3,0.45);m.add(e);});
- const club=new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.25,1.6,8),new THREE.MeshStandardMaterial({color:0x6b4a2a}));club.position.set(1,1.4,0.2);club.rotation.z=-0.5;m.add(club);
+ const club=new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.25,1.6,8),new THREE.MeshStandardMaterial({color:0x6b4a2a}));club.position.set(1,1.4,0.2);club.rotation.z=-0.5;m.add(club);m.userData.club=club;
  const bar=new THREE.Mesh(new THREE.PlaneGeometry(1.6,0.14),new THREE.MeshBasicMaterial({color:0xff3333}));bar.position.y=3.1;m.add(bar);m.userData.bar=bar;
  scene.add(m);miniPool.push(m);return m;}
 function spawnMini(){const vol=Math.max(1,Math.min(S.count,25)),dps=vol*S.dmg*Math.max(1,S.count/25)/S.rate,hp=20+S.stage*25+dps*2.2;S.enemies.push({x:(Math.random()*2-1)*(ROAD-1.5),z:-90,hp,max:hp,mini:1,mesh:miniMesh()});flash('⚠ 중간보스 출현!');}
@@ -249,7 +284,7 @@ function update(dt){
  S.bullets=S.bullets.filter(b=>!b.dead);S.enemies=S.enemies.filter(e=>!e.dead);
  // boss
  if(S.boss){const B=S.boss;B.z=Math.min(-R-1.2,B.z+1*dt);boss.position.set(0,0,B.z);
-  if(B.z>=-R-1.3){B.t-=dt;if(B.t<=0){B.t=0.2;SFX.hurt();S.count-=1+Math.floor(S.count*0.05);}}
+  if(B.z>=-R-1.3){B.atk=(B.atk||0)+dt;if(B.atk>=1.2){B.atk=0.001;SFX.hurt();SFX.boss();S.count-=2+Math.floor(S.count*0.1);shake=0.6;burst(0,0.3,B.z+2.6,16);}}else B.atk=0;
   bb.firstChild.style.width=Math.max(0,B.hp/B.max*100)+'%';
   if(B.hp<=0){SFX.clear();S.boss=null;boss.visible=false;bb.style.display='none';S.stage++;S.stageStart=S.dist;S.nextGate=S.dist+10;S.nextEnemy=S.dist+40;S.nextMini=S.dist+S.stageLen*0.6;S.base=Math.min(100,S.base+30);flash("스테이지 클리어! 기지 +30");}}
  S.count=Math.min(S.count,99999);if(S.count<=0||S.base<=0){S.count=Math.max(0,S.count);end();}
@@ -266,11 +301,23 @@ function render(){
   soldierM.count=headM.count=helmM.count=gunM.count=n;[soldierM,headM,helmM,gunM].forEach(o=>o.instanceMatrix.needsUpdate=true);
   miniPool.forEach(o=>o.visible=false);
   for(const e of S.enemies)if(e.mini&&!e.dead){const o=e.mesh;o.visible=true;o.position.set(e.x,Math.abs(Math.sin(performance.now()/200))*0.15,e.z);
-   o.userData.bar.scale.x=Math.max(0.01,e.hp/e.max);o.userData.bar.lookAt(cam.position);}
+   o.userData.bar.scale.x=Math.max(0.01,e.hp/e.max);o.userData.bar.lookAt(cam.position);
+   const hitting=e.z>-crowdR()-2.2;o.userData.club.rotation.x=hitting?Math.sin(performance.now()/90)*1.3:Math.sin(performance.now()/400)*0.2;}
   const grunts=S.enemies.filter(e=>!e.mini);
-  const m=Math.min(grunts.length,MAXE);for(let i=0;i<m;i++){const e=grunts[i];dummy.position.set(e.x,0.4,e.z);dummy.updateMatrix();enemyM.setMatrixAt(i,dummy.matrix);
-   dummy.position.y=0.95;dummy.updateMatrix();ehM.setMatrixAt(i,dummy.matrix);}
-  enemyM.count=ehM.count=m;enemyM.instanceMatrix.needsUpdate=ehM.instanceMatrix.needsUpdate=true;
+  const m=Math.min(grunts.length,MAXE),tt=performance.now()/1000,CR=crowdR()+1.2;
+  for(let i=0;i<m;i++){const e=grunts[i],ph=tt*9+i*1.7,sw=Math.sin(ph),bob=Math.abs(sw)*0.06,x=e.x,z=e.z,near=z>-CR-1.5;
+   dummy.rotation.set(0,0,0);dummy.scale.set(1,1.15,0.9);dummy.position.set(x,0.5+bob,z);dummy.updateMatrix();enemyM.setMatrixAt(i,dummy.matrix);
+   dummy.scale.set(1,1,1);dummy.position.set(x,0.98+bob,z+0.02);dummy.updateMatrix();ehM.setMatrixAt(i,dummy.matrix);
+   for(let k=0;k<2;k++){const d=k?1:-1;
+    dummy.position.set(x+d*0.22,1.04+bob,z);dummy.rotation.set(0,0,-d*1.1);dummy.updateMatrix();eEarM.setMatrixAt(i*2+k,dummy.matrix);
+    dummy.rotation.set(0,0,0);dummy.position.set(x+d*0.08,1.0+bob,z+0.2);dummy.updateMatrix();eEyeM.setMatrixAt(i*2+k,dummy.matrix);
+    dummy.position.set(x+d*0.1,0.18,z);dummy.rotation.set(d*sw*0.7,0,0);dummy.updateMatrix();eLegM.setMatrixAt(i*2+k,dummy.matrix);}
+   const swing=near?Math.sin(tt*14+i)*1.3:-0.5+sw*0.2; // raise and smash the club when close to the squad
+   dummy.position.set(x+0.3,0.78+bob,z+0.05);dummy.rotation.set(swing,0,-0.3);dummy.updateMatrix();eClubM.setMatrixAt(i,dummy.matrix);}
+  dummy.rotation.set(0,0,0);dummy.scale.set(1,1,1);
+  enemyM.count=ehM.count=eClubM.count=m;eEarM.count=eEyeM.count=eLegM.count=m*2;[enemyM,ehM,eEarM,eEyeM,eLegM,eClubM].forEach(o=>o.instanceMatrix.needsUpdate=true);
+  animateBoss();
+  if(!camBase)camBase=cam.position.clone();shake=Math.max(0,shake-0.03);cam.position.set(camBase.x+(Math.random()-.5)*shake,camBase.y+(Math.random()-.5)*shake,camBase.z);
   const k=S.bullets.length;for(let i=0;i<k;i++){const b=S.bullets[i];dummy.position.set(b.x,0.6,b.z);dummy.rotation.set(Math.PI/2,0,0);dummy.updateMatrix();bulletM.setMatrixAt(i,dummy.matrix);}dummy.rotation.set(0,0,0);
   bulletM.count=k;bulletM.instanceMatrix.needsUpdate=true;
 

@@ -59,7 +59,9 @@ const SFX={
  sword:()=>once('sword',90,()=>{noise(.07,.12,4200,3,0,-2000);}),
  boom:()=>{noise(.7,.5,300,0.6,0,-220);tone(70,.6,'sawtooth',.35,-30);},
  // the ultimate's 'ding': a bright metallic ring with long decay, over a deep thump and a rushing whoosh
- ding:()=>{const f0=110;[[1,.55,4.2],[2.0,.24,3.4],[2.42,.15,2.8],[3.0,.09,2.2],[0.5,.35,4.6]].forEach(([m,v,d])=>tone(f0*m,d,'sine',v));tone(f0*1.004,4.0,'sine',.28);tone(f0*0.5*1.003,4.4,'triangle',.18);tone(38,.9,'sine',.7,-8);noise(.5,.15,600,1,0.02,-450);},
+ /* catapult launch: wooden arm thunk, then an air whoosh that follows the stone; fire pots add a roaring, crackling blaze */
+ fling:(dur,fire)=>{tone(95,.14,'triangle',.35,-45);noise(.08,.25,300,1.2);for(let i=0;i<4;i++){const k=i/3;noise(.32,.07+.05*Math.sin(k*Math.PI),500+k*500,0.8,dur*k*0.85,-200);}
+  if(fire){for(let i=0;i<Math.ceil(dur/0.35);i++)noise(.4,.1,260,0.6,i*0.35,-80);for(let i=0;i<14;i++)noise(.03+Math.random()*.03,.12+Math.random()*.1,1800+Math.random()*2500,2,Math.random()*dur);}}, ding:()=>{const f0=110;[[1,.55,4.2],[2.0,.24,3.4],[2.42,.15,2.8],[3.0,.09,2.2],[0.5,.35,4.6]].forEach(([m,v,d])=>tone(f0*m,d,'sine',v));tone(f0*1.004,4.0,'sine',.28);tone(f0*0.5*1.003,4.4,'triangle',.18);tone(38,.9,'sine',.7,-8);noise(.5,.15,600,1,0.02,-450);},
  coin:()=>tone(1300,.07,'triangle',.12),
  pick:()=>{tone(700,.08,'square',.1,500);tone(1050,.08,'square',.06,0,.06);},
  horn:()=>{[0,.18,.36].forEach((t,i)=>tone([220,277,330][i],.32,'sawtooth',.09,0,t));},
@@ -182,7 +184,7 @@ function catFire(u){let best=null,bs=-1;
   const sc=n*10-d*0.01+(e.x<u.x+200?5:0);if(sc>bs){bs=sc;best=e;}}
  if(!best)return false;const tr=u.track||'',lv=u.tl||0,lead=best.spd*(tr=='fire'?1.8:0.9),base=u.dmg*S.uAtk;
  const dmg=tr=='rock'?base*(1+0.9*lv):tr=='fire'?base*(1+0.12*lv):base;
- S.boulders.push({x:u.x,y:u.y,sx:u.x,sy:u.y,tx:best.x-lead,ty:best.y,t:0,dur:tr=='fire'?1.8:0.9,tr,lv,dmg,R:55+(tr=='rock'?lv*7:lv*4),pool:tr=='fire'?{dps:base*(0.2+0.14*lv),life:5+lv*1.2,R:45+lv*8}:null});u.atk=1;SFX.sword();return true;}
+ S.boulders.push({x:u.x,y:u.y,sx:u.x,sy:u.y,tx:best.x-lead,ty:best.y,t:0,dur:tr=='fire'?1.8:0.9,tr,lv,dmg,R:55+(tr=='rock'?lv*7:lv*4),pool:tr=='fire'?{dps:base*(0.2+0.14*lv),life:5+lv*1.2,R:45+lv*8}:null});u.atk=1;once('fling',120,()=>SFX.fling(tr=='fire'?1.8:0.9,tr=='fire'));return true;}
 function catUpdate(dt){
  for(const b of S.boulders){b.t+=dt;const k=Math.min(1,b.t/b.dur);b.x=b.sx+(b.tx-b.sx)*k;b.y=b.sy+(b.ty-b.sy)*k;b.h=Math.sin(k*Math.PI)*(90+b.lv*8);
   if(b.tr=='fire'&&Math.random()<0.6)S.fx.push({x:b.x,y:b.y,vx:(Math.random()-.5)*30,vy:-20-Math.random()*30,t:.3,part:Math.random()<.5?'#ff8a20':'#ffd040'});

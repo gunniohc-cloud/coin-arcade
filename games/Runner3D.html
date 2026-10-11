@@ -171,7 +171,7 @@ function updateObjs(mv,R){const lane=S.px<0?-1:1;
   if(o.z>10)removeObj(o);}
  S.objs=S.objs.filter(o=>!o.dead);}
 // bullets crossing an object's plane this frame hit it (front-most object in that lane first)
-function bulletHitsObj(b){const bl=b.x<0?-1:1,gain=(3+S.count*0.08)*S.rate/Math.max(1,Math.min(S.count,25));let best=null,bz=-1e9;
+function bulletHitsObj(b){const bl=b.x<0?-1:1,gain=(1.4+S.count*0.035)*S.rate/Math.max(1,Math.min(S.count,25));let best=null,bz=-1e9;
  for(const o of S.objs){if(o.dead||o.lane!=bl||o.done)continue;const face=o.type=='gate'?o.z:o.z+0.75;
   if(b.pz>=face&&b.z<face&&(o.type=='gate'||Math.abs(b.x-o.x)<0.95)&&face>bz){best=o;bz=face;}}
  if(!best)return false;

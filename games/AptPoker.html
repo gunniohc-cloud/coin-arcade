@@ -92,6 +92,8 @@ function evaluate(h){const rs=h.map(c=>c.r).sort((a,b)=>a-b),cnt={};rs.forEach(r
 // ---------- state ----------
 let credit=30000,peak=30000,bet=1,hand=[],held=[false,false,false,false,false],phase='idle',win=0,dbl=null,lastRank=-1;
 const $=id=>document.getElementById(id);
+// cards that were just dealt play a flip-in animation once
+let flip=new Set(),flipT=null;function flipCards(ix){flip=new Set(ix);clearTimeout(flipT);flipT=setTimeout(()=>{flip=new Set();},600);}
 function cardHTML(c,i,extra=''){if(!c)return `<div class="card back ${extra}" data-i="${i}"></div>`;const red=c.s==1||c.s==2;
  return `<div class="card ${red?'red':''} ${extra}" data-i="${i}"><div class="r">${RK[c.r]}<br>${SU[c.s]}</div><div class="c">${SU[c.s]}</div><div class="rb">${RK[c.r]}<br>${SU[c.s]}</div>${extra.includes('held')?'<div class="hold">HOLD</div>':''}</div>`;}
 function render(){
@@ -104,7 +106,7 @@ function render(){
   return `<div class="tier ${on?'on':nx?'next':past?'past':''}"><span class="tn">${nx?'▲ ':''}${t[1]}</span><span class="tp">${won(t[0])}</span></div>`;}).join('');
  $('cr').textContent=won(credit);$('bt').textContent=bet+'코인 ('+won(bet*COIN)+')';
  if(phase=='double'||phase=='dblres'){$('cards').innerHTML=dbl.cards.map((c,i)=>i==0?cardHTML(c,i,'dealer'):(phase=='double'?cardHTML(null,i,'pick'):cardHTML(c,i,i==dbl.pick?'held':''))).join('');}
- else $('cards').innerHTML=[0,1,2,3,4].map(i=>cardHTML(hand[i],i,held[i]&&phase=='draw'?'held':'')).join('');
+ else $('cards').innerHTML=[0,1,2,3,4].map(i=>cardHTML(hand[i],i,(held[i]&&phase=='draw'?'held':'')+(flip.has(i)?' flip f'+i:''))).join('');
  const idle=phase=='idle'||phase=='result';
  $('bDeal').textContent=phase=='draw'?'DRAW':'DEAL';$('bDeal').disabled=!(idle&&!win||phase=='draw');
  $('bBet').disabled=$('bMax').disabled=$('bCash').disabled=!(idle&&!win);$('bDbl').disabled=!((phase=='result'&&win)||phase=='dblres'&&dbl.won);
@@ -114,11 +116,11 @@ function say(a,b=''){$('msg').textContent=a;$('sub').textContent=b;}
 function deal(){au();
  if(phase=='draw')return draw();
  if(credit<COIN){say('💸 파산','최고 자산 '+won(peak)+' 기록 · 3억으로 다시 시작');postScore(peak,'파산 · 최고 자산');credit=30000;peak=30000;SFX.lose();render();return;}if(credit<bet*COIN){bet=Math.floor(credit/COIN);}
- credit-=bet*COIN;shuffle();hand=[deck.pop(),deck.pop(),deck.pop(),deck.pop(),deck.pop()];held=[0,0,0,0,0].map(()=>false);phase='draw';win=0;
+ credit-=bet*COIN;shuffle();hand=[deck.pop(),deck.pop(),deck.pop(),deck.pop(),deck.pop()];held=[0,0,0,0,0].map(()=>false);flipCards([0,1,2,3,4]);phase='draw';win=0;
  SFX.card();const r=evaluate(hand);say(r>=0?PAY[r][0]+'!':'HOLD할 카드를 고르세요','1~5 또는 카드 클릭');render();}
-function draw(){for(let i=0;i<5;i++)if(!held[i])hand[i]=deck.pop();SFX.card();lastRank=evaluate(hand);
+function draw(){flipCards([0,1,2,3,4].filter(i=>!held[i]));for(let i=0;i<5;i++)if(!held[i])hand[i]=deck.pop();SFX.card();lastRank=evaluate(hand);
  win=lastRank>=0?(lastRank==0&&bet==5?4000:PAY[lastRank][1]*bet)*COIN:0;phase='result';
- if(win){(lastRank<=2?SFX.big:SFX.win)();say(PAY[lastRank][0]+'  '+won(win),'= '+aptText(win)+'  ·  DOUBLE 하시겠습니까?');}
+ if(win){(lastRank<=2?SFX.big:SFX.win)();{const sc=$('screen');sc.classList.remove('won');void sc.offsetWidth;sc.classList.add('won');}say(PAY[lastRank][0]+'  '+won(win),'= '+aptText(win)+'  ·  DOUBLE 하시겠습니까?');}
  else{SFX.lose();say('꽝','다음 판은 반드시...');}render();}
 function postScore(v,how){try{parent.postMessage({type:"arcade-score",game:"poker",score:v,detail:how+" "+aptText(v)},"*")}catch(e){}}
 function cashOut(){au();postScore(credit,"정산");say("💼 "+won(credit)+" 정산","기록을 남기고 3억으로 새로 시작");credit=30000;peak=30000;SFX.coin();render();}
@@ -179,6 +181,12 @@ button{background-image:linear-gradient(#fff6,#fff0 50%,#0002 51%,#0000);text-sh
 #bar{background:linear-gradient(#000,#111);border:2px solid #333;box-shadow:inset 0 0 12px #f0f2}
 #bar b{text-shadow:0 0 8px #ffd23f88}
 .tier.on{box-shadow:0 0 12px #ffb83f}
+@keyframes cardIn{0%{transform:perspective(600px) rotateY(90deg) translateY(-30px);opacity:.2}60%{transform:perspective(600px) rotateY(-12deg)}100%{transform:none;opacity:1}}
+.card.flip{animation:cardIn .42s ease-out both}.card.f1{animation-delay:.06s}.card.f2{animation-delay:.12s}.card.f3{animation-delay:.18s}.card.f4{animation-delay:.24s}
+.card.held.flip{animation:none}
+@keyframes winGlow{0%,100%{box-shadow:0 0 0 0 #ffd23f00}50%{box-shadow:0 0 30px 6px #ffd23f}}
+#screen.won{animation:winGlow .8s ease-in-out 3}
+@media (prefers-reduced-motion:reduce){.card.flip,#screen.won{animation:none}}
 </style>
 <div id="rule" hidden><div id="ruleBox"><button id="ruleX" aria-label="닫기">✕</button><h2 id="ruleT"></h2><p id="ruleD"></p><div id="ruleEx"></div><p id="ruleP"></p><p class="tip">배당표의 다른 줄을 눌러도 설명이 나와요</p></div></div>
 <style>

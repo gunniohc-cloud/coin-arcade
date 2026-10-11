@@ -302,7 +302,7 @@ function buildAim(){const lane=laneOf(S.px),c=[];
  c.sort((a,b)=>b.z-a.z);return c;}
 // one row of the stream: a few grunts spread across lanes 1-2, toughness tied to the army's firepower and the gate level
 function spawnStreamRow(mul){const gl=gateLevel(),k=Math.max(1,Math.min(6,Math.round((1+S.count/30+gl/3+(Math.random()<0.5?1:0))*mul))),
- hp=Math.max(1,firepower()*0.22/k)*(1+0.2*(gl-1))*(S.stage==1&&S.dist<60?0.6:1),lo=LX[0]-LW/2+0.5,hi=LX[1]+LW/2-0.5;
+ hp=Math.max(1,firepower()*0.1/k)*(1+0.2*(gl-1))*(S.stage==1&&S.dist<60?0.6:1),lo=LX[0]-LW/2+0.5,hi=LX[1]+LW/2-0.5;
  for(let i=0;i<k&&S.enemies.length<MAXE;i++)S.enemies.push({x:lo+Math.random()*(hi-lo),z:SPAWN_Z-Math.random()*1.5,hp,max:hp});}function gateLevel(){return 1+Math.floor(S.gatesN/4)+(S.stage-1);}
 function pickAim(){const c=aimList;if(!c.length)return null;if(c.length<=3)return c[0];return c[Math.floor(Math.random()*Math.min(c.length,8))];}
 // ---------- flashy effects: shockwave rings, explosion light, glowing sparks, screen flash ----------

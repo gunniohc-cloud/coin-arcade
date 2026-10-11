@@ -423,7 +423,7 @@ function update(dt){
  // the endless enemy stream fills lanes 1 and 2 (it keeps coming during the boss too)
  S.sd=(S.sd||0)+(S.boss?S.speed*dt:mv);if(S.sd>S.nextRow){spawnStreamRow(S.boss?0.5:1);S.nextRow=S.sd+2.2;}
 
- if(!S.boss&&inStage>=S.stageLen+8){S.boss={z:-36,hp:(()=>{const v=Math.max(1,Math.min(S.count,25));return (40+S.stage*30+v*S.dmg*Math.max(1,S.count/25)/S.rate*3.2)*(1+0.2*(gateLevel()-1));})(),max:0,t:0};S.boss.max=S.boss.hp;boss.visible=true;bb.style.display='block';SFX.boss();
+ if(!S.boss&&inStage>=S.stageLen+8){S.boss={z:-36,hp:(()=>{const v=Math.max(1,Math.min(S.count,25));return (40+S.stage*30+v*S.dmg*Math.max(1,S.count/25)/S.rate*6)*(1+0.2*(gateLevel()-1));})(),max:0,t:0};S.boss.max=S.boss.hp;boss.visible=true;bb.style.display='block';SFX.boss();
   S.gates.forEach(g=>scene.remove(g.mesh));S.gates=[];S.objs.forEach(removeObj);S.objs=[];S.bd=0;S.nextBR=0;S.nextBS=12;}
  // during the boss fight the conveyor keeps running: reinforcement gates on the right, a special item on the left
  if(S.boss){S.bd+=S.speed*dt;

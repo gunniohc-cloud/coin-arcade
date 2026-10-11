@@ -98,7 +98,7 @@ let S,running=false;
 const cntEl=document.getElementById('cnt'),hud=document.getElementById('hud'),msg=document.getElementById('msg'),bb=document.getElementById('bossbar');
 function reset(){
  for(const g of (S?S.gates:[]))scene.remove(g.mesh);
- S={count:3,base:100,gatesN:0,px:0,tx:0,dist:0,speed:9,stage:1,dmg:1,rate:0.35,fireT:0,enemies:[],bullets:[],gates:[],nextGate:25,nextEnemy:40,nextMini:130,leak:0,
+ S={count:3,base:100,gatesN:0,px:0,tx:0,dist:0,speed:9,stage:1,dmg:1,rate:0.35,fireT:0,enemies:[],bullets:[],gates:[],nextGate:25,nextEnemy:40,nextMini:132,leak:0,
    boss:null,stageLen:220,stageStart:0};
  boss.visible=false;bb.style.display='none';
 }
@@ -109,17 +109,27 @@ function randOp(good){const st=S.stage;
  if(good){const r=Math.random();if(r<0.6)return{t:'+',v:2+Math.floor(Math.random()*(3+st*2))};if(r<0.72&&S.count<60)return{t:'x',v:2};
   return Math.random()<0.5?{t:'dmg'}:{t:'rate'};}
  const r=Math.random();if(r<0.65)return{t:'-',v:3+Math.floor(Math.random()*(5+st*4))+Math.floor(S.count*0.15)};return{t:'/',v:2};}
-function spawnGate(){const good=Math.random()<0.5;S.gatesN++;const ops=(S.gatesN<=2||Math.random()<0.25)?[randOp(true),randOp(true)]:[randOp(good),randOp(!good)];
+function spawnGate(ops){
  const grp=new THREE.Group();
- ops.forEach((o,i)=>{const bad=o.t=='-'||o.t=='/';const col=bad?'#d0342c':(o.t=='dmg'||o.t=='rate')?'#e09b18':'#2a9df4';
+ ops.forEach((o,i)=>{if(!o){grp.add(new THREE.Object3D());return;}const bad=o.t=='-'||o.t=='/';const col=bad?'#d0342c':(o.t=='dmg'||o.t=='rate')?'#e09b18':'#2a9df4';
   const p=new THREE.Mesh(new THREE.PlaneGeometry(ROAD-0.2,2.4),new THREE.MeshBasicMaterial({map:textTex(opText(o),col),transparent:true,opacity:0.85,side:2}));
   p.position.set((i?1:-1)*ROAD/2,1.4,0);grp.add(p);});
  const post=new THREE.Mesh(new THREE.BoxGeometry(0.2,2.8,0.2),new THREE.MeshLambertMaterial({color:0xffffff}));post.position.y=1.4;grp.add(post);
  grp.position.z=-90;scene.add(grp);S.gates.push({mesh:grp,ops,z:-90});}
-function applyOp(o){if(o.t=='-'||o.t=='/')SFX.bad();else if(o.t=='dmg'||o.t=='rate')SFX.power();else SFX.good();if(o.t=='+')S.count+=o.v;else if(o.t=='-')S.count-=o.v;else if(o.t=='x')S.count*=o.v;else if(o.t=='/')S.count=Math.ceil(S.count/o.v);
+function applyOp(o){if(!o)return;if(o.t=='-'||o.t=='/')SFX.bad();else if(o.t=='dmg'||o.t=='rate')SFX.power();else SFX.good();if(o.t=='+')S.count+=o.v;else if(o.t=='-')S.count-=o.v;else if(o.t=='x')S.count*=o.v;else if(o.t=='/')S.count=Math.ceil(S.count/o.v);
  else if(o.t=='dmg')S.dmg+=0.5;else S.rate=Math.max(0.08,S.rate*0.8);}
-function spawnEnemies(){const early=S.stage==1&&S.dist<110;const n=early?Math.min(2+Math.floor(S.count*0.5),3+Math.floor(Math.random()*3)):Math.min(140,Math.floor(2+S.stage*3+Math.random()*S.stage*5+S.count*0.35)),cx=(Math.random()*2-1)*(ROAD-1.5);
- for(let i=0;i<n;i++){const a=i*2.4,r=0.35*Math.sqrt(i);S.enemies.push({x:Math.max(-ROAD,Math.min(ROAD,cx+Math.cos(a)*r)),z:-90+Math.sin(a)*r,hp:1+S.stage*0.6});}}
+// enemy group in one lane. HP is tuned to the army's current firepower so wiping a group takes
+// most of the approach window: you can either hold that lane and shoot, or grab the gate on the other side — not both.
+function spawnEnemies(lane,z0){z0=z0||-90;const n=Math.min(60,6+S.stage*2+Math.floor(Math.random()*3));
+ const vol=Math.max(1,Math.min(S.count,25)),dps=vol*S.dmg*Math.max(1,S.count/25)/S.rate;
+ let hp=Math.max(1+S.stage*0.6,dps*2.6/n);if(S.stage==1&&S.dist<110)hp*=0.6;
+ const cx=lane==null?(Math.random()*2-1)*(ROAD-1.5):lane*ROAD/2,lo=lane==null?-ROAD:lane<0?-ROAD:0.4,hi=lane==null?ROAD:lane<0?-0.4:ROAD;
+ for(let i=0;i<n;i++){const a=i*2.4,r=0.35*Math.sqrt(i);S.enemies.push({x:Math.max(lo,Math.min(hi,cx+Math.cos(a)*r)),z:z0+Math.sin(a)*r,hp,max:hp});}}
+// encounter = a good gate on one side + an enemy group on the other side, arriving together
+function spawnEncounter(){S.gatesN++;
+ if(S.gatesN<=2){spawnGate([randOp(true),randOp(true)]);return;} // warm-up: two free gates
+ const s=Math.random()<0.5?0:1,ops=[null,null];ops[s]=randOp(true);ops[1-s]=Math.random()<0.5?null:randOp(false);
+ spawnGate(ops);spawnEnemies(s?-1:1,-90-2.5*(90/S.speed));}
 // mid-boss: tanky ogre that walks with the road; blocks and chews the army, big penalty if it slips past
 const miniPool=[];
 function miniMesh(){let m=miniPool.find(o=>!o.visible);if(m){m.visible=true;return m;}
@@ -131,7 +141,7 @@ function miniMesh(){let m=miniPool.find(o=>!o.visible);if(m){m.visible=true;retu
  const club=new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.25,1.6,8),new THREE.MeshStandardMaterial({color:0x6b4a2a}));club.position.set(1,1.4,0.2);club.rotation.z=-0.5;m.add(club);
  const bar=new THREE.Mesh(new THREE.PlaneGeometry(1.6,0.14),new THREE.MeshBasicMaterial({color:0xff3333}));bar.position.y=3.1;m.add(bar);m.userData.bar=bar;
  scene.add(m);miniPool.push(m);return m;}
-function spawnMini(){const hp=15+S.stage*20+S.count*1.0;S.enemies.push({x:(Math.random()*2-1)*(ROAD-1.5),z:-90,hp,max:hp,mini:1,mesh:miniMesh()});flash('⚠ 중간보스 출현!');}
+function spawnMini(){const vol=Math.max(1,Math.min(S.count,25)),dps=vol*S.dmg*Math.max(1,S.count/25)/S.rate,hp=40+S.stage*50+dps*5;S.enemies.push({x:(Math.random()*2-1)*(ROAD-1.5),z:-90,hp,max:hp,mini:1,mesh:miniMesh()});flash('⚠ 중간보스 출현!');}
 let flashT=0;function flash(t){const el=document.getElementById('flash');el.textContent=t;el.style.opacity=1;flashT=1.2;}
 // soldier formation offsets (spiral)
 const form=[];for(let i=0;i<MAXS;i++){const a=i*2.39996,r=0.32*Math.sqrt(i);form.push([Math.cos(a)*r,Math.sin(a)*r]);}
@@ -156,9 +166,8 @@ function update(dt){
  const inStage=S.dist-S.stageStart;
  // spawning
  if(!S.boss&&inStage<S.stageLen){
-  if(S.dist>S.nextGate){spawnGate();S.nextGate=S.dist+28+Math.random()*10;}
-  if(S.dist>S.nextEnemy&&inStage>30){spawnEnemies();S.nextEnemy=S.dist+35+Math.random()*15;}
-  if(S.dist>S.nextMini&&inStage>50){spawnMini();S.nextMini=S.dist+60+Math.random()*20;}}
+  if(S.dist>S.nextGate){spawnEncounter();S.nextGate=S.dist+30+Math.random()*8;}
+  if(S.dist>S.nextMini){spawnMini();S.nextMini=Infinity;S.nextGate=Math.max(S.nextGate,S.dist+45);}}
  if(!S.boss&&inStage>=S.stageLen+60&&!S.enemies.length){S.boss={z:-60,hp:150*S.stage*S.stage+100,max:0,t:0};S.boss.max=S.boss.hp;boss.visible=true;bb.style.display='block';SFX.boss();
   S.gates.forEach(g=>scene.remove(g.mesh));S.gates=[];}
  // gates
@@ -172,11 +181,11 @@ function update(dt){
  for(const b of S.bullets){b.z-=40*dt;b.life-=dt;if(b.life<=0)b.dead=1;}
  // enemies
  const R=crowdR()+0.3;
- for(const e of S.enemies){e.z+=mv+2.5*dt;e.x+=Math.sign(S.px-e.x)*1.2*dt*(e.z>-25?1:0);
+ for(const e of S.enemies){e.z+=mv+2.5*dt;
   if(!e.mini&&Math.abs(e.z)<R&&Math.abs(e.x-S.px)<R){e.dead=1;S.count--;SFX.hurt();}
   // enemy slipped past the army → penalty
-  if(!e.dead&&e.z>R+0.5){e.dead=1;const p=e.mini?30:5;S.base=Math.max(0,S.base-p);SFX.hurt();flash(e.mini?'중간보스 돌파! 기지 -'+p:'적 돌파! 기지 -'+p);}}
- for(const e of S.enemies)if(e.mini&&!e.dead&&Math.abs(e.z)<R+0.8&&Math.abs(e.x-S.px)<R+0.8){e.t=(e.t||0)-dt;if(e.t<=0){e.t=0.12;S.count-=Math.ceil(S.stage);SFX.hurt();}e.z-=mv+2.5*dt-0.5*dt;}
+  if(!e.dead&&e.z>R+0.5){e.dead=1;const p=e.mini?40:3;S.base=Math.max(0,S.base-p);SFX.hurt();flash(e.mini?'중간보스 돌파! 기지 -'+p:'적 돌파! 기지 -'+p);}}
+ for(const e of S.enemies)if(e.mini&&!e.dead&&Math.abs(e.z)<R+0.8&&Math.abs(e.x-S.px)<R+0.8){e.t=(e.t||0)-dt;if(e.t<=0){e.t=0.1;S.count-=Math.ceil(S.stage*1.5);SFX.hurt();}e.z-=mv+2.5*dt-0.5*dt;}
  for(const b of S.bullets){if(b.dead)continue;
   for(const e of S.enemies){const hr=e.mini?1:0.45;if(!e.dead&&Math.abs(e.z-b.z)<hr+0.05&&Math.abs(e.x-b.x)<hr){e.hp-=b.d;b.dead=1;if(e.hp<=0){e.dead=1;SFX.kill();}break;}}
   if(!b.dead&&S.boss&&Math.abs(b.z-S.boss.z)<1.2&&Math.abs(b.x)<1.6){S.boss.hp-=b.d;b.dead=1;SFX.bossHit();}}
@@ -185,7 +194,7 @@ function update(dt){
  if(S.boss){const B=S.boss;B.z=Math.min(-R-1.2,B.z+2*dt);boss.position.set(0,0,B.z);
   if(B.z>=-R-1.3){B.t-=dt;if(B.t<=0){B.t=0.15;SFX.hurt();S.count-=Math.ceil(S.stage*1.5);}}
   bb.firstChild.style.width=Math.max(0,B.hp/B.max*100)+'%';
-  if(B.hp<=0){SFX.clear();S.boss=null;boss.visible=false;bb.style.display='none';S.stage++;S.stageStart=S.dist;S.nextGate=S.dist+10;S.nextEnemy=S.dist+40;S.nextMini=S.dist+55;S.base=Math.min(100,S.base+30);flash("스테이지 클리어! 기지 +30");}}
+  if(B.hp<=0){SFX.clear();S.boss=null;boss.visible=false;bb.style.display='none';S.stage++;S.stageStart=S.dist;S.nextGate=S.dist+10;S.nextEnemy=S.dist+40;S.nextMini=S.dist+S.stageLen*0.6;S.base=Math.min(100,S.base+30);flash("스테이지 클리어! 기지 +30");}}
  S.count=Math.min(S.count,99999);if(S.count<=0||S.base<=0){S.count=Math.max(0,S.count);end();}
 }
 function render(){

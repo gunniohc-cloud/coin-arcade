@@ -228,7 +228,7 @@ function draw(){
  else[14,130,270,430,520,620].forEach((x,i)=>g.fillText(items[i],x,24));
  g.textAlign='center';const cx=CW/2,cy=CH/2;
  if(S.spawnLeft==0&&!S.enemies.length&&!S.over){g.font='bold 32px "Malgun Gothic"';g.lineWidth=5;g.strokeStyle='#000';const t=`다음 웨이브 ${Math.ceil(S.waveT)}`;g.strokeText(t,cx,cy);g.fillStyle='#fff';g.fillText(t,cx,cy);}
- if(!S.over){drawTowerDrag();drawBombUI();}g.textAlign='center';
+ if(!S.over){drawTowerDrag();drawRepair();drawBombUI();}g.textAlign='center';
  if(!S.started){g.fillStyle='#000a';g.fillRect(0,0,CW,CH);g.fillStyle='#ffd27a';g.font=`bold ${PORT?40:52}px "Malgun Gothic"`;g.fillText('영주 디펜스',cx,cy-30);
   g.fillStyle='#fff';g.font='bold 20px "Malgun Gothic"';g.globalAlpha=.6+Math.sin(performance.now()/300)*.4;g.fillText('화면을 터치하면 시작',cx,cy+20);g.globalAlpha=1;
   g.font='14px "Malgun Gothic"';g.fillStyle='#ccb';g.fillText('💣 폭탄은 버튼에서 드래그해서 투하',cx,cy+54);}
@@ -271,9 +271,31 @@ function bombBtn(){return PORT?{x:CW-46,y:CH-170,r:32}:{x:CW-52,y:CH-52,r:34};}
 let drag=null;
 function evPos(ev){const r=cv.getBoundingClientRect();return {x:(ev.clientX-r.left)*CW/r.width,y:(ev.clientY-r.top)*CH/r.height,out:ev.clientX<r.left||ev.clientX>r.right||ev.clientY<r.top||ev.clientY>r.bottom};}
 const overBtn=p=>{const b=bombBtn();return Math.hypot(p.x-b.x,p.y-b.y)<b.r+6;};
+// ---------- tower repair: tap a tower to see the repair price (proportional to missing HP) ----------
+let selTower=null,repairBtn=null;
+const repairCost=u=>Math.ceil((1-u.hp/u.max)*u.cost*0.9);
+function towerTap(p){
+ if(selTower&&repairBtn&&p.x>=repairBtn.x&&p.x<=repairBtn.x+repairBtn.w&&p.y>=repairBtn.y&&p.y<=repairBtn.y+repairBtn.h){
+  const c=repairCost(selTower);if(selTower.hp>=selTower.max){selTower=null;return true;}
+  if(S.gold<c){S.fx.push({x:selTower.x,y:selTower.y-70,t:.8,txt:'골드 부족',col:'#ff8080'});return true;}
+  S.gold-=c;selTower.hp=selTower.max;SFX.pick();S.fx.push({x:selTower.x,y:selTower.y-70,t:.8,txt:'🔧 수리 완료',col:'#7fe3ab'});selTower=null;return true;}
+ const t=S.units.filter(u=>u.fixed).find(u=>{const [sx,sy]=P(u.x,u.y);return Math.abs(p.x-sx)<24&&p.y<sy+10&&p.y>sy-66;});
+ if(t){selTower=t===selTower?null:t;return true;}
+ if(selTower){selTower=null;return true;}
+ return false;}
+function drawRepair(){repairBtn=null;if(!selTower)return;if(!S.units.includes(selTower)){selTower=null;return;}
+ const [x,y]=P(selTower.x,selTower.y),full=selTower.hp>=selTower.max,c=repairCost(selTower),ok=!full&&S.gold>=c;
+ g.save();g.strokeStyle='#ffd27a';g.lineWidth=2;g.setLineDash([5,4]);g.beginPath();g.ellipse(x,y+3,26,8,0,0,7);g.stroke();g.setLineDash([]);
+ const w=118,h=34,bx=Math.max(4,Math.min(CW-w-4,x-w/2)),by=Math.max(40,y-112);repairBtn={x:bx,y:by,w,h};
+ g.fillStyle=full?'#3a3a3aee':ok?'#2f6b3aee':'#5a2a2aee';g.beginPath();g.roundRect?g.roundRect(bx,by,w,h,9):g.rect(bx,by,w,h);g.fill();g.strokeStyle='#ffd27a';g.lineWidth=2;g.stroke();
+ g.fillStyle='#fff';g.font='bold 14px "Malgun Gothic"';g.textAlign='center';g.textBaseline='middle';
+ g.fillText(full?'체력 가득':`🔧 수리 ${c}G`,bx+w/2,by+h/2+1);g.textBaseline='alphabetic';
+ g.fillStyle='#0008';g.fillRect(bx,by+h+3,w,5);g.fillStyle='#5be36b';g.fillRect(bx,by+h+3,w*selTower.hp/selTower.max,5);
+ g.restore();}
 cv.addEventListener('pointerdown',ev=>{const wasStarted=S.started;au();
  if(S.over){reset(true);return;}if(!wasStarted||S.paused)return;
  const p=evPos(ev);
+ if(towerTap(p))return;
  if(overBtn(p)){if(S.bombs<=0){const b=bombBtn();S.fx.push({...wrld(b.x,b.y-40),t:.8,txt:'폭탄 없음',col:'#ff8080'});return;}
   drag={x:p.x,y:p.y,out:false,cancel:true};try{cv.setPointerCapture(ev.pointerId)}catch(e){}ev.preventDefault();}});
 cv.addEventListener('pointermove',ev=>{if(!drag)return;const p=evPos(ev);drag.x=p.x;drag.y=p.y;drag.out=p.out;drag.cancel=p.out||overBtn(p);});

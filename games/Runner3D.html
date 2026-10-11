@@ -184,7 +184,7 @@ function applyOp(o){if(!o)return;if(o.t=='-'||o.t=='/')SFX.bad();else if(o.t=='d
 // most of the approach window: you can either hold that lane and shoot, or grab the gate on the other side — not both.
 function spawnEnemies(lane,z0){z0=z0||SPAWN_Z;const gl=gateLevel(),n=Math.min(80,6+S.stage*2+gl*2+Math.floor(Math.random()*3));
  const vol=Math.max(1,Math.min(S.count,25)),dps=vol*S.dmg*Math.max(1,S.count/25)/S.rate;
- let hp=Math.max(1+S.stage*0.6,dps*3.0/n)*(1+0.3*(gl-1)); /* aim assist wastes few bullets, and bigger gates mean a bigger army: scale up */if(S.stage==1&&S.dist<110)hp*=0.6;
+ let hp=Math.max(1+S.stage*0.6,dps*2.5/n)*(1+0.3*(gl-1)); /* aim assist wastes few bullets, and bigger gates mean a bigger army: scale up */if(S.stage==1&&S.dist<110)hp*=0.6;
  const cx=lane==null?(Math.random()*2-1)*(ROAD-1.5):LX[lane],lo=lane==null?-ROAD:LX[lane]-LW/2+0.35,hi=lane==null?ROAD:LX[lane]+LW/2-0.35;
  for(let i=0;i<n;i++){const a=i*2.4,r=0.35*Math.sqrt(i);S.enemies.push({x:Math.max(lo,Math.min(hi,cx+Math.cos(a)*r)),z:z0+Math.sin(a)*r,hp,max:hp});}}
 // encounter = a good gate on one side + an enemy group on the other side, arriving together

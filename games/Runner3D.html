@@ -159,7 +159,7 @@ let S,running=false;
 const cntEl=document.getElementById('cnt'),hud=document.getElementById('hud'),msg=document.getElementById('msg'),bb=document.getElementById('bossbar');
 function reset(){
  for(const g of (S?S.gates:[]))scene.remove(g.mesh);for(const o of (S?S.objs:[]))scene.remove(o.mesh);
- S={count:3,base:100,gatesN:0,px:0,tx:0,dist:0,speed:4.5,stage:1,dmg:1,rate:0.35,fireT:0,enemies:[],bullets:[],gates:[],objs:[],parts:[],fired:[],nextGate:20,nextR:8,nextEnemy:40,nextMini:132,leak:0,
+ S={count:3,base:100,gatesN:0,px:0,tx:0,dist:0,speed:4.5,stage:1,dmg:1,rate:0.35,fireT:0,enemies:[],bullets:[],gates:[],objs:[],parts:[],fired:[],missiles:[],w:{laser:0,flame:0,missile:0},nextGate:20,nextR:8,nextEnemy:40,nextMini:132,leak:0,
    boss:null,stageLen:220,stageStart:0};
  boss.visible=false;bb.style.display='none';
 }
@@ -213,7 +213,7 @@ function drawBarrel(o){const n=Math.ceil(o.hp);if(n===o.shown)return;o.shown=n;c
  x.fillStyle=o.rw.col;x.fillRect(8,6,240,60);x.fillStyle='#fff';x.font='bold 36px sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText(o.rw.txt,128,38);
  x.fillStyle='#000a';x.fillRect(20,80,216,32);x.fillStyle='#ff5040';x.fillRect(20,80,216*Math.max(0,o.hp/o.max),32);x.fillStyle='#fff';x.font='bold 26px sans-serif';x.fillText(n,128,97);t.needsUpdate=true;}
 function removeObj(o){scene.remove(o.mesh);o.dead=1;}
-function gainReward(rw){const k=rw.big?2:1;if(rw.k=="dmg")S.dmg+=0.5*k;else if(rw.k=="rate")S.rate=Math.max(0.06,S.rate*(rw.big?0.65:0.8));else if(rw.k=='add')S.count+=rw.v||10;else S.count*=2;SFX.power();flash(rw.txt+' 획득!');}
+function gainReward(rw){if(WEAPONS.some(w=>w.k==rw.k)){S.w[rw.k]++;SFX.power();flash(rw.txt+' Lv'+S.w[rw.k]+' 획득!');return;}const k=rw.big?2:1;if(rw.k=="dmg")S.dmg+=0.5*k;else if(rw.k=="rate")S.rate=Math.max(0.06,S.rate*(rw.big?0.65:0.8));else if(rw.k=='add')S.count+=rw.v||10;else S.count*=2;SFX.power();flash(rw.txt+' 획득!');}
 // a row = two lanes. Each lane holds a negative gate (shoot it up), a reward barrel (break it),
 // a barrel shielding a good gate, or an enemy group (hold the lane or the base takes damage).
 // three lanes: left/middle carry enemy squads hiding behind an item shield, the right lane streams soldier gates
@@ -221,7 +221,7 @@ const LX=[-5.4,0,5.4],LW=5.4,PUSH=0.75,SPAWN_Z=-40; // things appear closer so t
 function laneOf(x){return x<-LW/2?0:x<LW/2?1:2;}
 function spawnWave(){S.gatesN++;const fp=firepower(),both=S.gatesN>2&&Math.random()<0.4,first=Math.random()<0.5?0:1;
  (both?[0,1]:[first]).forEach(l=>{
-  let rw=Math.random()<.1&&S.count<80?REWARDS[3]:REWARDS[Math.floor(Math.random()*3)];if(rw.k=='add'){const v=Math.max(10,Math.round(S.count*0.35/5)*5,gateLevel()*12);rw={...rw,v,txt:'👥 +'+v};}
+  let rw=Math.random()<.35?WEAPONS[Math.floor(Math.random()*3)]:Math.random()<.1&&S.count<80?REWARDS[3]:REWARDS[Math.floor(Math.random()*3)];if(rw.k=='add'){const v=Math.max(10,Math.round(S.count*0.35/5)*5,gateLevel()*12);rw={...rw,v,txt:'👥 +'+v};}
   makeBarrel(l,SPAWN_Z,Math.max(6,fp*(1.8+Math.random()*0.8))*(1+0.25*(gateLevel()-1)),rw);   // the item is the squad's shield: break it to reach them (and keep the item)
   spawnEnemies(l,SPAWN_Z-3.5);});}
 function spawnRow(){S.gatesN++;const z=-90,ez=-90-2.5*(90/S.speed),fp=firepower(),st=S.stage;
@@ -299,6 +299,51 @@ function buildAim(){const lane=laneOf(S.px),c=[];
  c.sort((a,b)=>b.z-a.z);return c;}
 function gateLevel(){return 1+Math.floor(S.gatesN/4)+(S.stage-1);}
 function pickAim(){const c=aimList;if(!c.length)return null;if(c.length<=3)return c[0];return c[Math.floor(Math.random()*Math.min(c.length,8))];}
+// ---------- weapon items (from barrels): laser beam, flamethrower, homing missiles. Each pickup adds a level. ----------
+const WEAPONS=[{k:'laser',txt:'🔴 레이저',col:'#d0302a'},{k:'flame',txt:'🔥 화염방사',col:'#e06a10'},{k:'missile',txt:'🚀 유도미사일',col:'#3a6ad0'}];
+const laserMesh=new THREE.Mesh(new THREE.BoxGeometry(0.22,0.22,44),new THREE.MeshBasicMaterial({color:0xff3a3a,transparent:true,opacity:.8,blending:THREE.AdditiveBlending,depthWrite:false}));
+const laserCore=new THREE.Mesh(new THREE.BoxGeometry(0.08,0.08,44),new THREE.MeshBasicMaterial({color:0xffffff}));laserMesh.add(laserCore);laserMesh.visible=false;scene.add(laserMesh);
+const flameMesh=new THREE.Mesh(new THREE.ConeGeometry(2.4,9,18,1,true),new THREE.MeshBasicMaterial({color:0xff7a1a,transparent:true,opacity:.45,blending:THREE.AdditiveBlending,side:2,depthWrite:false}));
+flameMesh.rotation.x=-Math.PI/2;flameMesh.visible=false;scene.add(flameMesh);
+const flameIn=new THREE.Mesh(new THREE.ConeGeometry(1.2,6,14,1,true),new THREE.MeshBasicMaterial({color:0xffe060,transparent:true,opacity:.55,blending:THREE.AdditiveBlending,side:2,depthWrite:false}));flameIn.position.y=-1.5;flameMesh.add(flameIn);
+const missileM=inst(new THREE.CylinderGeometry(0.09,0.12,0.6,8),0xd03a2a,80);
+function wpnBase(){return S.dmg*Math.max(1,S.count/25);}
+// damage something by `dmg`; `shots` = how many bullets this counts as (for reinforcement gates)
+function hurtEnemy(e,dmg){if(e.dead)return;e.hp-=dmg;if(e.hp<=0){e.dead=1;SFX.kill();burst(e.x,e.z,e.mini?20:5);}}
+function hurtObj(o,dmg,shots){if(o.dead||o.done)return;
+ if(o.type=='gate'){S.addAcc=(S.addAcc||0)+o.v*shots/Math.max(1,Math.min(S.count,25));while(S.addAcc>=1){S.addAcc-=1;S.count++;S.pulse=1;}return;}
+ o.hp-=dmg;if(o.hp<=0){burst(o.x,o.z,16,1);gainReward(o.rw);removeObj(o);}}
+function weaponsUpdate(dt,R){if(!S.w)S.w={laser:0,flame:0,missile:0};const W=S.w,base=wpnBase(),px=S.px,lane=laneOf(px);
+ // laser: a straight beam in front of the army, hits everything in its column
+ if(W.laser){const dps=base*5*W.laser,w=0.7+W.laser*0.15;
+  for(const e of S.enemies)if(e.z<0&&e.z>-44&&Math.abs(e.x-px)<w+(e.mini?1:0.3))hurtEnemy(e,dps*dt);
+  for(const o of S.objs)if(o.z<0&&o.z>-44&&o.lane==lane&&(o.type=='gate'||Math.abs(o.x-px)<LW/2))hurtObj(o,dps*dt,dps*dt/base);
+  if(S.boss&&Math.abs(px)<1.6+w)S.boss.hp-=dps*dt;}
+ // flamethrower: short wide cone, burns groups
+ if(W.flame){const dps=base*7*W.flame,reach=-(7+W.flame*1.2);
+  for(const e of S.enemies)if(e.z<0&&e.z>reach&&Math.abs(e.x-px)<2.2+(-e.z)*0.12)hurtEnemy(e,dps*dt);
+  for(const o of S.objs)if(o.z<0&&o.z>reach-0.8&&o.lane==lane)hurtObj(o,dps*dt,dps*dt/base);
+  if(S.boss&&S.boss.z>reach-1.5&&Math.abs(px)<4)S.boss.hp-=dps*dt;
+  if(Math.random()<0.6)S.parts.push({x:px+(Math.random()-.5)*1.5,y:0.7,z:-1-Math.random()*2,vx:(Math.random()-.5)*3,vy:1+Math.random()*2,vz:-8-Math.random()*6,t:.35});}
+ // homing missiles: pick the nearest threat anywhere on the road and splash it
+ if(W.missile){S.mslT=(S.mslT||0)-dt;if(S.mslT<=0){S.mslT=Math.max(0.35,1.3-W.missile*0.15);
+   for(let k=0;k<Math.min(5,W.missile);k++)S.missiles.push({x:px+(k-(W.missile-1)/2)*0.5,y:1.2,z:-0.5,vx:(Math.random()-.5)*6,vy:4,vz:-6,t:4});}}
+ const targets=()=>{const c=S.enemies.filter(e=>!e.dead&&e.z<0).map(e=>({x:e.x,z:e.z,e}));for(const o of S.objs)if(!o.dead&&o.type=='barrel'&&o.z<0)c.push({x:o.x,z:o.z+0.75,o});if(S.boss)c.push({x:0,z:S.boss.z+1,boss:1});return c;};
+ let tl=null;
+ for(const m of S.missiles){m.t-=dt;if(!m.tg||(m.tg.e&&m.tg.e.dead)||(m.tg.o&&m.tg.o.dead)){tl=tl||targets();let best=null,bd=1e9;for(const c of tl){const d=Math.hypot(c.x-m.x,c.z-m.z);if(d<bd){bd=d;best=c;}}m.tg=best;}
+  const t=m.tg;if(t){const tx=t.e?t.e.x:t.o?t.o.x:t.x,tz=t.e?t.e.z:t.o?t.o.z+0.75:S.boss?S.boss.z+1:t.z,dx=tx-m.x,dz=tz-m.z,d=Math.hypot(dx,dz)||1;
+   m.vx+=(dx/d*22-m.vx)*Math.min(1,dt*5);m.vz+=(dz/d*22-m.vz)*Math.min(1,dt*5);
+   if(d<0.8){const dmg=base*9*Math.max(1,W.missile*0.6);for(const e of S.enemies)if(Math.hypot(e.x-tx,e.z-tz)<1.6)hurtEnemy(e,dmg);
+    for(const o of S.objs)if(o.type=='barrel'&&Math.abs(o.x-tx)<LW/2&&Math.abs(o.z+0.75-tz)<1.6)hurtObj(o,dmg,0);if(t.boss&&S.boss)S.boss.hp-=dmg;
+    burst(tx,tz,10,1);m.t=0;}}
+  m.vy-=6*dt;m.x+=m.vx*dt;m.z+=m.vz*dt;m.y=Math.max(0.6,m.y+m.vy*dt);if(Math.random()<.5&&S.parts.length<480)S.parts.push({x:m.x,y:m.y,z:m.z+0.3,vx:0,vy:0.5,vz:1,t:.2});}
+ S.missiles=S.missiles.filter(m=>m.t>0);}
+function weaponsRender(){const W=S.w||{},t=performance.now()/1000;
+ laserMesh.visible=!!W.laser;if(W.laser){laserMesh.position.set(S.px,0.7,-22);const s=1+W.laser*0.25+Math.sin(t*40)*0.15;laserMesh.scale.set(s,s,1);laserMesh.material.opacity=.6+Math.sin(t*25)*.2;}
+ flameMesh.visible=!!W.flame;if(W.flame){const L=1+W.flame*0.15;flameMesh.position.set(S.px,0.8,-1-4.5*L);flameMesh.scale.set(1+Math.sin(t*30)*0.08,L,1+Math.cos(t*27)*0.08);}
+ const n=Math.min(80,S.missiles.length);for(let i=0;i<n;i++){const m=S.missiles[i];dummy.position.set(m.x,m.y,m.z);dummy.rotation.set(Math.PI/2,0,-Math.atan2(m.vx,-m.vz));dummy.updateMatrix();missileM.setMatrixAt(i,dummy.matrix);}
+ dummy.rotation.set(0,0,0);missileM.count=n;missileM.instanceMatrix.needsUpdate=true;}
+
 function update(dt){
  if(flashT>0){flashT-=dt;if(flashT<=0)document.getElementById('flash').style.opacity=0;}
  const mv=S.speed*dt*(S.boss?0.0:1);S.dist+=mv;
@@ -325,10 +370,10 @@ function update(dt){
  S.flashT=Math.max(0,(S.flashT||0)-dt);S.recoil=Math.max(0,(S.recoil||0)-dt*7);
  for(const p of S.parts){p.vy-=12*dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.z+=p.vz*dt+mv;p.t-=dt;}S.parts=S.parts.filter(p=>p.t>0&&p.y>0);
  S.fireT-=dt;if(S.fireT<=0&&S.count>0){S.fireT=S.rate;SFX.shoot();aimList=buildAim();S.fired=[];S.flashT=0.07;S.recoil=1;const shots=Math.min(S.count,25),per=S.dmg*Math.max(1,S.count/25);
-  for(let i=0;i<shots;i++){const fi=Math.floor(Math.random()*Math.min(S.count,VIS)),f=form[fi];S.fired.push(fi);if(S.bullets.length<MAXB){const b={x:S.px+f[0],z:f[1]-0.3,d:per,life:1.3,vx:0};const t=pickAim();if(t){const tt=Math.max(0.05,(b.z-t.z)/40);b.vx=Math.max(-25,Math.min(25,(t.x-b.x)/tt));}S.bullets.push(b);}}}
+  for(let i=0;i<shots;i++){const fi=Math.floor(Math.random()*Math.min(S.count,VIS)),f=form[fi];S.fired.push(fi);if(S.bullets.length<MAXB){const b={x:S.px+f[0],z:f[1]-0.3,d:per,life:1.3,vx:0};S.bullets.push(b);}}}
  for(const b of S.bullets){b.pz=b.z;b.z-=40*dt;b.x+=(b.vx||0)*dt;b.life-=dt;if(b.life<=0)b.dead=1;}
  // enemies
- const R=crowdR()+0.3;updateObjs(S.boss?S.speed*dt:mv,R,dt);
+ const R=crowdR()+0.3;updateObjs(S.boss?S.speed*dt:mv,R,dt);weaponsUpdate(dt,R);
  for(const e of S.enemies){e.z+=mv+(e.mini?1.25:PUSH)*dt;
   if(!e.mini&&Math.abs(e.z)<R&&Math.abs(e.x-S.px)<R){e.dead=1;S.count--;SFX.hurt();}
   // enemy slipped past the army → penalty
@@ -372,7 +417,7 @@ function render(){
    dummy.position.set(x+0.3,0.78+bob,z+0.05);dummy.rotation.set(swing,0,-0.3);dummy.updateMatrix();eClubM.setMatrixAt(i,dummy.matrix);}
   dummy.rotation.set(0,0,0);dummy.scale.set(1,1,1);
   enemyM.count=ehM.count=eClubM.count=m;eEarM.count=eEyeM.count=eLegM.count=m*2;[enemyM,ehM,eEarM,eEyeM,eLegM,eClubM].forEach(o=>o.instanceMatrix.needsUpdate=true);
-  animateBoss();
+  animateBoss();weaponsRender();
   if(!camBase)camBase=cam.position.clone();shake=Math.max(0,shake-0.03);cam.position.set(camBase.x+(Math.random()-.5)*shake,camBase.y+(Math.random()-.5)*shake,camBase.z);
   const k=S.bullets.length;for(let i=0;i<k;i++){const b=S.bullets[i];dummy.position.set(b.x,0.6,b.z);dummy.rotation.set(Math.PI/2,0,0);dummy.updateMatrix();bulletM.setMatrixAt(i,dummy.matrix);}dummy.rotation.set(0,0,0);
   bulletM.count=k;bulletM.instanceMatrix.needsUpdate=true;
@@ -380,7 +425,7 @@ function render(){
   const p=new THREE.Vector3(S.px,1.9,-crowdR()*0.45).project(cam);
   cntEl.style.left=(p.x+1)/2*innerWidth+'px';cntEl.style.top=(viewTop+(1-p.y)/2*viewH)+'px';cntEl.textContent=S.count;if(PORT&&!hud._fit){hud._fit=1;resize();}S.pulse=Math.max(0,(S.pulse||0)-0.08);cntEl.style.transform=`translate(-50%,-100%) scale(${1+S.pulse*0.2})`;cntEl.style.color=S.pulse>0.3?"#7fffa0":"#fff";
   const prog=S.boss?'BOSS!':Math.min(100,Math.floor((S.dist-S.stageStart)/(S.stageLen+60)*100))+'%';
-  hud.textContent=`🏠 기지 ${S.base}  ·  스테이지 ${S.stage}  ·  진행 ${prog}  ·  공격력 ${S.dmg.toFixed(1)}  ·  공속 ${(1/S.rate).toFixed(1)}/s`;}
+  hud.textContent=`🏠 기지 ${S.base}  ·  스테이지 ${S.stage}  ·  진행 ${prog}  ·  공격력 ${S.dmg.toFixed(1)}  ·  공속 ${(1/S.rate).toFixed(1)}/s${S.w.laser?"  ·  🔴"+S.w.laser:""}${S.w.flame?"  ·  🔥"+S.w.flame:""}${S.w.missile?"  ·  🚀"+S.w.missile:""}`;}
  renderer.render(scene,cam);}
 // lane buttons + fullscreen (landscape lock where the browser allows it)
 

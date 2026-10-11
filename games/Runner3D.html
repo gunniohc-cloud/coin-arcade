@@ -333,7 +333,7 @@ function weaponsUpdate(dt,R){if(!S.w)S.w={laser:0,flame:0,missile:0};const W=S.w
  for(const m of S.missiles){m.t-=dt;if(!m.tg||(m.tg.e&&m.tg.e.dead)||(m.tg.o&&m.tg.o.dead)){tl=tl||targets();let best=null,bd=1e9;for(const c of tl){const d=Math.hypot(c.x-m.x,c.z-m.z);if(d<bd){bd=d;best=c;}}m.tg=best;}
   const t=m.tg;if(t){const tx=t.e?t.e.x:t.o?t.o.x:t.x,tz=t.e?t.e.z:t.o?t.o.z+0.75:S.boss?S.boss.z+1:t.z,dx=tx-m.x,dz=tz-m.z,d=Math.hypot(dx,dz)||1;
    m.vx+=(dx/d*28-m.vx)*Math.min(1,dt*6);m.vz+=(dz/d*28-m.vz)*Math.min(1,dt*6);
-   if(d<0.8){const dmg=base*9*Math.max(1,W.missile*0.6);for(const e of S.enemies)if(Math.hypot(e.x-tx,e.z-tz)<1.6)hurtEnemy(e,dmg);
+   if(d<0.8){const dmg=base*16*Math.max(1,W.missile*0.6);for(const e of S.enemies)if(Math.hypot(e.x-tx,e.z-tz)<1.6)hurtEnemy(e,dmg);
     for(const o of S.objs)if(o.type=='barrel'&&Math.abs(o.x-tx)<LW/2&&Math.abs(o.z+0.75-tz)<1.6)hurtObj(o,dmg,0);if(t.boss&&S.boss)S.boss.hp-=dmg;
     burst(tx,tz,10,1);m.t=0;}}
   m.vy-=6*dt;m.x+=m.vx*dt;m.z+=m.vz*dt;m.y=Math.max(0.6,m.y+m.vy*dt);if(Math.random()<.5&&S.parts.length<480)S.parts.push({x:m.x,y:m.y,z:m.z+0.3,vx:0,vy:0.5,vz:1,t:.2});}

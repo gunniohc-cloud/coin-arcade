@@ -36,10 +36,13 @@ h1 span{color:var(--coin)}
 .tag.ok{border-color:#3fbf7a;color:#7fe3ab}
 #play{position:fixed;inset:0;background:#000;display:flex;flex-direction:column}
 #play[hidden]{display:none}
-#bar{display:flex;align-items:center;gap:12px;padding:8px 12px;padding-top:calc(8px + env(safe-area-inset-top,0px));background:var(--panel);border-bottom:2px solid var(--line)}
-#back{font-family:var(--body);font-size:15px;font-weight:700;background:var(--coin);color:#1a1200;border:0;border-radius:8px;padding:8px 14px;cursor:pointer}
+/* the game gets the whole screen; going back is a small tab on the left edge so it never covers a game HUD */
+#bar{position:absolute;left:0;top:50%;transform:translateY(-50%);z-index:5}
+#back{display:flex;align-items:center;gap:4px;font-family:var(--body);font-size:12px;font-weight:700;background:#1a120899;color:var(--coin);border:2px solid #ffc93c88;border-left:0;border-radius:0 10px 10px 0;padding:10px 6px 10px 3px;cursor:pointer;opacity:.7;backdrop-filter:blur(3px);writing-mode:vertical-rl;letter-spacing:.1em}
+#back:hover,#back:focus-visible{opacity:1}
 #back:focus-visible{outline:3px solid var(--fg)}
-#now{font-family:var(--display);font-size:20px}
+#now{display:none}
+#play{position:fixed}
 iframe{flex:1;border:0;width:100%;background:#000}
 #hall{display:flex;flex-direction:column;gap:12px;border-top:2px dashed var(--line);padding-top:20px}
 .hallhead{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
@@ -94,7 +97,7 @@ iframe{flex:1;border:0;width:100%;background:#000}
  <ol class="board small" id="recBoard"></ol>
  <button type="button" id="recClose">닫기</button>
 </form></div>
-<div id="play" hidden><div id="bar"><button id="back">← 오락실로</button><span id="now"></span></div><iframe id="frame" allow="autoplay; fullscreen" title="게임 화면"></iframe></div>
+<div id="play" hidden><div id="bar"><button id="back" aria-label="오락실로 돌아가기">◀ 오락실</button><span id="now"></span></div><iframe id="frame" allow="autoplay; fullscreen" title="게임 화면"></iframe></div>
 
 <script src="firebase-config.js"></script>
 <script>

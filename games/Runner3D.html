@@ -51,7 +51,7 @@ document.body.appendChild(renderer.domElement);
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x87b8e8);scene.fog=new THREE.Fog(0xcfe4f2,45,115);
 const cam=new THREE.PerspectiveCamera(56,1,0.1,200);
 // fixed camera: the squad holds its ground, only enemies and gates come in
-function resize(){const vw=Math.round((window.visualViewport||window).width||innerWidth),vh=Math.round((window.visualViewport||window).height||innerHeight);renderer.setSize(vw,vh);cam.aspect=vw/vh;const port=innerHeight>innerWidth;cam.fov=port?64:52;cam.position.set(0,port?22:8,port?17:8.6);cam.lookAt(0,0,port?-17:-12);document.getElementById("rot").hidden=!port;cam.updateProjectionMatrix();}
+function resize(){const vw=Math.round((window.visualViewport||window).width||innerWidth),vh=Math.round((window.visualViewport||window).height||innerHeight);renderer.setSize(vw,vh);cam.aspect=vw/vh;const port=innerHeight>innerWidth;cam.fov=port?64:42;cam.position.set(0,port?22:10.5,port?17:14);cam.lookAt(0,0,port?-17:-7.5);document.getElementById("rot").hidden=!port;cam.updateProjectionMatrix();}
 addEventListener('resize',resize);resize();
 if(window.visualViewport)visualViewport.addEventListener("resize",resize);
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
@@ -248,7 +248,7 @@ function miniMesh(){let m=miniPool.find(o=>!o.visible);if(m){m.visible=true;retu
 function spawnMini(){const vol=Math.max(1,Math.min(S.count,25)),dps=vol*S.dmg*Math.max(1,S.count/25)/S.rate,hp=20+S.stage*25+dps*2.2;S.enemies.push({x:(Math.random()*2-1)*(ROAD-1.5),z:SPAWN_Z,hp,max:hp,mini:1,mesh:miniMesh()});flash('⚠ 중간보스 출현!');}
 let flashT=0;function flash(t){const el=document.getElementById('flash');el.textContent=t;el.style.opacity=1;flashT=1.2;}
 // soldier formation offsets (spiral)
-const form=[];for(let i=0;i<MAXS;i++){const a=i*2.39996,r=0.32*Math.sqrt(i);form.push([Math.cos(a)*r,Math.sin(a)*r]);}
+const form=[];for(let i=0;i<MAXS;i++){const a=i*2.39996,r=0.32*Math.sqrt(i);form.push([Math.cos(a)*r,Math.sin(a)*r*0.45]); // shallow block so a big army stays on screen}
 function crowdR(){return 0.32*Math.sqrt(Math.min(S.count,MAXS));}
 // input
 const keys={};addEventListener('keydown',e=>keys[e.key.toLowerCase()]=1);addEventListener('keyup',e=>keys[e.key.toLowerCase()]=0);
@@ -350,4 +350,6 @@ let menuPaused=false;addEventListener("message",e=>{const d=e.data;if(!d||d.type
  if(d.cmd=="pause"&&running){running=false;menuPaused=true;}
  if(d.cmd=="resume"&&menuPaused){menuPaused=false;running=true;last=performance.now();}});
 reset();requestAnimationFrame(tick);
-</script></body></html>
+</script><style>/* no long-press text selection, callout menu or tap flash */*{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}input,textarea{-webkit-user-select:text;user-select:text}</style>
+<script>addEventListener('contextmenu',e=>{if(!e.target.closest||!e.target.closest('input,textarea'))e.preventDefault();});addEventListener('selectstart',e=>{if(!e.target.closest||!e.target.closest('input,textarea'))e.preventDefault();});</script>
+</body></html>

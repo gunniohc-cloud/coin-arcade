@@ -249,4 +249,6 @@ let menuPaused=false;addEventListener("message",e=>{const d=e.data;if(!d||d.type
  if(d.cmd=="pause"&&state=="play"){state="pause";menuPaused=true;try{document.exitPointerLock()}catch(x){}}
  if(d.cmd=="resume"&&menuPaused){menuPaused=false;state="play";}});
 requestAnimationFrame(loop);
-</script></body></html>
+</script><style>/* no long-press text selection, callout menu or tap flash */*{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}input,textarea{-webkit-user-select:text;user-select:text}</style>
+<script>addEventListener('contextmenu',e=>{if(!e.target.closest||!e.target.closest('input,textarea'))e.preventDefault();});addEventListener('selectstart',e=>{if(!e.target.closest||!e.target.closest('input,textarea'))e.preventDefault();});</script>
+</body></html>

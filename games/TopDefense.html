@@ -336,4 +336,6 @@ let menuPaused=false;addEventListener("message",e=>{const d=e.data;if(!d||d.type
  if(d.cmd=="pause"&&!S.paused&&!S.over){S.paused=true;menuPaused=true;}
  if(d.cmd=="resume"&&menuPaused){menuPaused=false;S.paused=false;}});
 reset();setMode();fit();addEventListener("resize",()=>{setMode();fit();});requestAnimationFrame(loop);
-</script></body></html>
+</script><style>/* no long-press text selection, callout menu or tap flash */*{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}input,textarea{-webkit-user-select:text;user-select:text}</style>
+<script>addEventListener('contextmenu',e=>{if(!e.target.closest||!e.target.closest('input,textarea'))e.preventDefault();});addEventListener('selectstart',e=>{if(!e.target.closest||!e.target.closest('input,textarea'))e.preventDefault();});</script>
+</body></html>

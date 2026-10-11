@@ -109,7 +109,7 @@ iframe{flex:1;border:0;width:100%;background:#000}
 <script src="firebase-config.js"></script>
 <script>
 // bumped on every deploy so phones don't keep an old cached game
-const BUILD='261011150957';
+const BUILD='261011151127';
 const GAMES=[
  {id:'poop',file:'games/PoopCatch.html',name:'냥똥 받기',desc:'뒤돌아 앉은 하얀 고양이가 뿌직 떨어뜨리는 똥을 손으로 받아내세요. 황금똥은 체력 회복.',tags:[['PC · 모바일','ok'],['마우스 · 터치 · A/D']],art:'poop'},
  {id:'poker',file:'games/AptPoker.html',name:'영끌 포커',desc:'원페어부터 이기는 전자 포커. 이기면 더블 판돈이 상계주공에서 원베일리까지 올라갑니다.',tags:[['PC · 모바일','ok'],['터치 · 키보드']],art:'poker'},
@@ -257,5 +257,8 @@ function draw(c,k){const x=c.getContext('2d'),W=640,H=320;
   E(596,282,26,26,'#1a1208dd','#ffd27a',3);E(594,285,11,11,'#222');E(614,302,10,10,'#e0402f','#fff',2);x.fillStyle='#fff';x.font='bold 12px sans-serif';x.textAlign='center';x.fillText('2',614,306);x.textAlign='left';}
 }
 </script>
+
+<style>/* no long-press text selection, callout menu or tap flash */*{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}input,textarea{-webkit-user-select:text;user-select:text}</style>
+<script>addEventListener('contextmenu',e=>{if(!e.target.closest||!e.target.closest('input,textarea'))e.preventDefault();});addEventListener('selectstart',e=>{if(!e.target.closest||!e.target.closest('input,textarea'))e.preventDefault();});</script>
 
 </body></html>

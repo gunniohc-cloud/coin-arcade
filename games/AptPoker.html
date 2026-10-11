@@ -272,4 +272,6 @@ addEventListener('keydown',e=>{if(document.getElementById('rule').hidden)return;
 {let sx=null;const box=document.getElementById('ruleBox');box.addEventListener('touchstart',e=>{sx=e.touches[0].clientX},{passive:true});
  box.addEventListener('touchend',e=>{if(sx==null)return;const dx=e.changedTouches[0].clientX-sx;sx=null;if(Math.abs(dx)>50)showRule(curRule+(dx<0?1:-1));});}
 </script>
+<style>/* no long-press text selection, callout menu or tap flash */*{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}input,textarea{-webkit-user-select:text;user-select:text}</style>
+<script>addEventListener('contextmenu',e=>{if(!e.target.closest||!e.target.closest('input,textarea'))e.preventDefault();});addEventListener('selectstart',e=>{if(!e.target.closest||!e.target.closest('input,textarea'))e.preventDefault();});</script>
 </body></html>

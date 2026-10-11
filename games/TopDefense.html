@@ -136,7 +136,7 @@ function update(dt){
   u.x=Math.min(u.x,u.ranged?ARCH_LINE:MELEE_LINE);}
  for(const e of S.enemies){if(e.hitK>0)e.hitK-=dt;if(e.stun>0){e.stun-=dt;if(e.kx){const m=Math.min(e.kx,dt*260);e.x+=m;e.kx-=m;}continue;}e.t-=dt;e.walk+=dt*e.spd/6;const[u,d]=nearest(S.units,e.x,e.y);e.atk=Math.max(0,(e.atk||0)-dt*4);
   if(u&&d<=e.range+e.r+8){if(e.t<=0){e.t=e.rate;e.atk=1;u.hp-=e.dmg;}}
-  else if(e.x>CX+50+e.r){const sm=(e.slowT>0?.5:1);e.slowT=(e.slowT||0)-dt;e.x-=e.spd*sm*dt;if(u&&d<120)e.y+=Math.sign(u.y-e.y)*e.spd*sm*dt*.5;}
+  else if(e.x>CX+50+e.r){const sm=e.slowT>0?Math.max(.1,Math.pow(.5,e.slowN||1)):1;e.slowT=(e.slowT||0)-dt;e.x-=e.spd*sm*dt;if(u&&d<120)e.y+=Math.sign(u.y-e.y)*e.spd*sm*dt*.5;}
   else if(e.t<=0){e.t=e.rate;e.atk=1;S.castle-=e.dmg;S.shake=4;SFX.castle();}}
  for(const s of S.shots){
   if(s.free){s.x+=Math.cos(s.a)*s.spd*dt;s.y+=Math.sin(s.a)*s.spd*dt;s.life-=dt;if(s.life<=0||s.x>W+20||s.y<0||s.y>H)s.dead=1;
@@ -189,7 +189,7 @@ function catFire(u){let best=null,bs=-1;
   const sc=n*10-d*0.01+(e.x<u.x+200?5:0);if(sc>bs){bs=sc;best=e;}}
  if(!best)return false;const tr=u.track||'',lv=u.tl||0,lead=best.spd*(tr=='fire'?1.8:0.9),base=u.dmg*S.uAtk;
  const dmg=tr=='rock'?base*(1+0.9*lv):tr=='fire'?base*(1+0.12*lv):base;
- S.boulders.push({x:u.x,y:u.y,sx:u.x,sy:u.y,tx:best.x-lead,ty:best.y,t:0,dur:tr=='fire'?1.8:0.9,tr,lv,dmg,R:55+(tr=='rock'?lv*7:lv*4),pool:tr=='fire'?{dps:base*(0.2+0.14*lv),life:5+lv*1.2,R:45+lv*8}:null});u.atk=1;once('fling',120,()=>SFX.fling(tr=='fire'?1.8:0.9,tr=='fire'));return true;}
+ S.boulders.push({x:u.x,y:u.y,sx:u.x,sy:u.y,tx:best.x-lead,ty:best.y,t:0,dur:tr=='fire'?1.8:0.9,tr,lv,dmg,R:55+(tr=='rock'?lv*7:lv*4),pool:tr=='fire'?{dps:base*(0.2+0.14*lv),life:2.5+lv*0.6,R:45+lv*8}:null});u.atk=1;once('fling',120,()=>SFX.fling(tr=='fire'?1.8:0.9,tr=='fire'));return true;}
 function catUpdate(dt){
  for(const b of S.boulders){b.t+=dt;const k=Math.min(1,b.t/b.dur);b.x=b.sx+(b.tx-b.sx)*k;b.y=b.sy+(b.ty-b.sy)*k;b.h=Math.sin(k*Math.PI)*(90+b.lv*8);
   if(b.tr=='fire'&&Math.random()<0.6)S.fx.push({hgt:b.h,x:b.x,y:b.y,vx:(Math.random()-.5)*30,vy:-20-Math.random()*30,t:.3,part:Math.random()<.5?'#ff8a20':'#ffd040'});
@@ -199,7 +199,7 @@ function catUpdate(dt){
    S.fx.push({x:b.x,y:b.y,r:b.R,t:.6});for(let i=0;i<8+b.lv*3;i++)S.fx.push({x:b.x,y:b.y,vx:(Math.random()-.5)*220,vy:-Math.random()*180,t:.5,part:b.tr=='fire'?(i%2?'#ff7a1a':'#ffd040'):'#8a8270'});}}
  S.boulders=S.boulders.filter(b=>!b.done);
  // burning patches on the ground
- for(const p of S.pools){p.t-=dt;for(const e of S.enemies)if(!e.dead&&Math.hypot(e.x-p.x,e.y-p.y)<p.R+e.r*0.5){e.slowT=0.15;e.hp-=p.dps*dt;if(Math.random()<0.08)S.fx.push({x:e.x,y:e.y-e.r*0.6,vx:0,vy:-40,t:.35,part:'#ff8a20'});if(e.hp<=0)kill(e);}}
+ for(const e of S.enemies)e.fireN=0;for(const p of S.pools){p.t-=dt;for(const e of S.enemies)if(!e.dead&&Math.hypot(e.x-p.x,e.y-p.y)<p.R+e.r*0.5){e.slowT=0.15;e.fireN++;e.slowN=Math.max(e.fireN,e.fireN==1&&e.slowN>1&&e.slowT>0.1?1:e.fireN);e.hp-=p.dps*dt;if(Math.random()<0.08)S.fx.push({x:e.x,y:e.y-e.r*0.6,vx:0,vy:-40,t:.35,part:'#ff8a20'});if(e.hp<=0)kill(e);}}
  S.pools=S.pools.filter(p=>p.t>0);}
 function drawPools(){const tt=performance.now()/1000;for(const p of S.pools){const [sx,sy]=P(p.x,p.y),k=Math.min(1,p.t/0.6),R=p.R*(PORT?1.05:1);
  g.save();g.globalAlpha=0.55*k;const rg=g.createRadialGradient(sx,sy,2,sx,sy,R);rg.addColorStop(0,'#ffd040');rg.addColorStop(.5,'#ff6a10');rg.addColorStop(1,'#ff3a0000');g.fillStyle=rg;

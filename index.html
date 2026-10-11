@@ -101,7 +101,7 @@ iframe{flex:1;border:0;width:100%;background:#000}
 const GAMES=[
  {id:'poop',file:'games/PoopCatch.html',name:'냥똥 받기',desc:'뒤돌아 앉은 하얀 고양이가 뿌직 떨어뜨리는 똥을 손으로 받아내세요. 황금똥은 체력 회복.',tags:[['PC · 모바일','ok'],['마우스 · 터치 · A/D']],art:'poop'},
  {id:'poker',file:'games/AptPoker.html',name:'영끌 포커',desc:'원페어부터 이기는 전자 포커. 이기면 더블 판돈이 상계주공에서 원베일리까지 올라갑니다.',tags:[['PC · 모바일','ok'],['터치 · 키보드']],art:'poker'},
- {id:'run',file:'games/Runner3D.html',name:'산수 군단 3D',desc:'좌우로 움직이며 대포를 쏘세요. ×2·+5 막을 통과한 대포알이 병사가 되어 적 기지로 돌격합니다.',tags:[['PC 권장'],['A/D · 드래그']],art:'run'},
+ {id:'run',file:'games/Runner3D.html',name:'산수 군단 3D',desc:'아이템 방패를 든 적이 양쪽에서 밀려옵니다. 방패를 깨서 무기를 얻고, 오른쪽 게이트로 병사를 불리세요.',tags:[['PC 권장'],['A/D · 드래그']],art:'run'},
  {id:'def',file:'games/TopDefense.html',name:'영주 디펜스',desc:'성 위의 영주가 활을 쏘고, 병사 소환과 타워 배치로 웨이브를 막아내세요. 5발 방사형 활, 드래그로 던지는 폭탄까지.',tags:[['PC 권장'],['클릭 · 1~3 · Q~Y']],art:'def'}];
 const grid=document.getElementById('grid');
 GAMES.forEach(g=>{const b=document.createElement('button');b.className='game';b.id='g-'+g.id;
@@ -116,7 +116,7 @@ const start=GAMES.find(g=>'#'+g.id==location.hash);if(start)open(start);
 
 // ---------- hall of fame (top 10 per game, kept in this browser) ----------
 const won=v=>{const e=Math.floor(v/10000),m=v%10000;return (e?e.toLocaleString()+'억':'')+(m?(e?' ':'')+m.toLocaleString()+'만':'')+'원';};
-const RANKED={poop:{fmt:v=>v.toLocaleString()+'점'},poker:{fmt:won},run:{fmt:v=>v.toLocaleString()+'점'},def:{fmt:v=>v.toLocaleString()+'점'}};
+const RANKED={poop:{fmt:v=>v.toLocaleString()+'점'},poker:{fmt:won},run:{fmt:v=>v.toLocaleString()+'m'},def:{fmt:v=>v.toLocaleString()+'점'}};
 const KEY='arcade-hof-v1';
 function loadHof(){try{return JSON.parse(localStorage.getItem(KEY))||{}}catch(e){return {}}}
 function saveHof(h){try{localStorage.setItem(KEY,JSON.stringify(h))}catch(e){}}
@@ -203,22 +203,19 @@ function draw(c,k){const x=c.getContext('2d'),W=640,H=320;
    x.fillStyle='#ffd23f';x.font='bold 12px sans-serif';x.fillText('HOLD',0,70);x.restore();});
   x.textAlign='center';x.font='bold 26px "Black Han Sans",sans-serif';x.lineWidth=4;x.strokeStyle='#000';x.strokeText('DOUBLE → 72억',W/2,298);x.fillStyle='#ffd23f';x.fillText('DOUBLE → 72억',W/2,298);x.textAlign='left';}
  if(k=='run'){x.fillStyle=LG(0,110,'#3d7fd6','#fdf1d8');x.fillRect(0,0,W,110);x.fillStyle=LG(100,H,'#5a9e43','#77bd5a');x.fillRect(0,100,W,H);
-  x.fillStyle='#c9b38a';x.beginPath();x.moveTo(250,100);x.lineTo(390,100);x.lineTo(600,H);x.lineTo(40,H);x.fill();
-  // enemy castle
-  x.fillStyle='#7a5a5a';x.fillRect(270,46,100,56);x.fillRect(256,30,22,72);x.fillRect(362,30,22,72);x.fillStyle='#b02a20';[[267,30],[373,30]].forEach(([a,b])=>{x.beginPath();x.moveTo(a-14,b);x.lineTo(a,b-22);x.lineTo(a+14,b);x.fill();});
-  x.fillStyle='#4a2a2a';x.fillRect(306,72,28,30);x.fillStyle='#ff5a4a';x.fillRect(260,10,120,8);
-  // red enemies coming down
-  [[290,120],[330,128],[355,118],[310,140],[270,136]].forEach(([a,b])=>{E(a,b,6,8,'#e0402f');E(a,b-9,5,5,'#7a1a12');});
-  // blue soldiers charging up
-  for(let i=0;i<22;i++){const a=200+((i*53)%240),b=150+((i*37)%60);E(a,b+4,6,8,'#2f7cf6');E(a,b-6,5,5,'#ffd9b0');E(a,b-8,5.5,3.5,'#1d4fb0');}
-  // gates
-  x.fillStyle='#2a9df4cc';x.fillRect(130,212,140,38);x.fillStyle='#d0342ccc';x.fillRect(290,212,110,38);x.fillStyle='#7a3fd0cc';x.fillRect(420,212,120,38);
-  x.fillStyle='#fff';x.font='900 28px sans-serif';x.textAlign='center';x.fillText('×2',200,241);x.fillText('-4',345,241);x.fillText('+6',480,241);
-  // balls and cannon
-  [[300,268],[296,256],[308,262],[210,222],[190,205]].forEach(([a,b])=>E(a,b,5,5,'#222831'));
-  E(320,306,34,10,'#0003');x.fillStyle='#8a5a2e';x.fillRect(296,282,48,20);E(292,300,10,10,'#4a3018');E(348,300,10,10,'#4a3018');
-  x.fillStyle='#2f3b52';x.beginPath();x.moveTo(310,284);x.lineTo(306,262);x.lineTo(334,262);x.lineTo(330,284);x.fill();x.fillStyle='#d4a62a';x.fillRect(305,260,30,4);
-  E(320,252,10,7,'#fff2a0');x.textAlign='left';}
+  x.fillStyle='#6f7079';x.beginPath();x.moveTo(240,100);x.lineTo(400,100);x.lineTo(610,H);x.lineTo(30,H);x.fill();
+  x.strokeStyle='#fff6c8';x.lineWidth=3;x.setLineDash([12,10]);[[293,170],[347,470]].forEach(([a,b])=>{x.beginPath();x.moveTo(a,100);x.lineTo(b,H);x.stroke();});x.setLineDash([]);
+  // left & middle: enemy squads behind item-shield barrels
+  const barrel=(a,b,s,txt,col)=>{x.fillStyle=col;x.fillRect(a-34*s,b-58*s,68*s,20*s);x.fillStyle='#fff';x.font=`bold ${13*s}px sans-serif`;x.textAlign='center';x.fillText(txt,a,b-43*s);
+   x.fillStyle='#8a5a2e';x.fillRect(a-18*s,b-30*s,36*s,34*s);x.fillStyle='#333';x.fillRect(a-18*s,b-24*s,36*s,3*s);x.fillRect(a-18*s,b-6*s,36*s,3*s);};
+  [[210,128],[225,134],[245,126],[235,140],[300,128],[320,134],[310,140],[290,136]].forEach(([a,b])=>{E(a,b,5,7,'#e0402f');E(a,b-8,4,4,'#7a1a12');});
+  barrel(232,182,1,'🔫 공격력+','#e09b18');barrel(306,188,1,'⚡ 연사+','#e09b18');
+  // right lane: stream of soldier gates
+  [[430,130,0.6,'+2'],[470,190,0.85,'+3'],[520,262,1.1,'+5']].forEach(([a,b,s,t])=>{x.fillStyle='#2a9df4d0';x.fillRect(a-40*s,b-30*s,80*s,40*s);x.strokeStyle='#fff';x.lineWidth=2;x.strokeRect(a-40*s,b-30*s,80*s,40*s);x.fillStyle='#fff';x.font=`900 ${24*s}px sans-serif`;x.textAlign='center';x.fillText(t,a,b-2*s);});
+  // player squad shooting
+  [[250,232],[262,215],[274,240],[240,250]].forEach(([a,b])=>{x.strokeStyle='#fff27a';x.lineWidth=2;x.beginPath();x.moveTo(a,b);x.lineTo(a,b-14);x.stroke();});
+  for(let i=0;i<26;i++){const a=i*2.4,r=6*Math.sqrt(i),sx=260+Math.cos(a)*r*1.6,sy=282+Math.sin(a)*r*.55;E(sx,sy+4,6,8,'#2f7cf6');E(sx,sy-6,5,5,'#ffd9b0');E(sx,sy-8,5.5,3.5,'#1d4fb0');}
+  x.fillStyle='#2f7cf6';x.fillRect(236,236,48,22);x.fillStyle='#fff';x.font='900 17px sans-serif';x.textAlign='center';x.fillText('26',260,253);x.textAlign='left';}
  if(k=='def'){x.fillStyle=LG(0,90,'#7cc4f0','#cfe9f5');x.fillRect(0,0,W,90);x.fillStyle='#8fb6a0';for(let i=0;i<6;i++){x.beginPath();x.moveTo(i*130-30,90);x.lineTo(i*130+50,40+(i*29)%30);x.lineTo(i*130+140,90);x.fill();}
   x.fillStyle=LG(80,H,'#78b257','#4f8a3c');x.fillRect(0,82,W,H);x.fillStyle='#c6a67188';x.beginPath();x.moveTo(110,110);x.bezierCurveTo(300,100,420,280,W,140);x.lineTo(W,250);x.bezierCurveTo(420,320,300,300,110,290);x.fill();
   x.fillStyle='#959aa8';x.fillRect(10,50,100,262);x.strokeStyle='#5f6472';x.lineWidth=1;for(let y=50;y<312;y+=14)for(let xx=10+((y/14)%2?0:12);xx<110;xx+=24)x.strokeRect(xx,y,24,14);

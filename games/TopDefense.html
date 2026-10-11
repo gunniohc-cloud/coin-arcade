@@ -268,7 +268,7 @@ function upgrade(u){au();const l=S.lv[u.lv];if(l>=u.max)return;const c=u.cost(l)
 // release on the button again or outside the screen cancels
 const BLAST=()=>PORT?100:90;
 // the bomb button lives inside the castle wall so it never covers the field
-function bombBtn(){return PORT?{x:CW-44,y:CH-62,r:28}:{x:72,y:BOT-58,r:30};}
+function bombBtn(){return PORT?{x:CW-44,y:CH-96,r:28}:{x:72,y:BOT-92,r:30};}
 let drag=null;
 function evPos(ev){const r=cv.getBoundingClientRect();return {x:(ev.clientX-r.left)*CW/r.width,y:(ev.clientY-r.top)*CH/r.height,out:ev.clientX<r.left||ev.clientX>r.right||ev.clientY<r.top||ev.clientY>r.bottom};}
 const overBtn=p=>{const b=bombBtn();return Math.hypot(p.x-b.x,p.y-b.y)<b.r+6;};

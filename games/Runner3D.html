@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Math Army 3D</title>
+<style>
+html,body{margin:0;height:100%;overflow:hidden;touch-action:none;background:#87b8e8;font-family:"Malgun Gothic",sans-serif;user-select:none}
+#hud{position:fixed;top:10px;left:0;right:0;text-align:center;color:#fff;font-size:20px;font-weight:bold;text-shadow:0 2px 4px #0008;pointer-events:none}
+#cnt{position:fixed;color:#fff;font-size:26px;font-weight:900;background:#2f7cf6;padding:2px 12px;border-radius:14px;transform:translate(-50%,-100%);pointer-events:none;box-shadow:0 2px 6px #0006}
+#msg{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;background:#0007;font-size:22px;text-align:center}
+#msg h1{font-size:48px;margin:0 0 10px}
+#flash{position:fixed;top:30%;left:0;right:0;text-align:center;color:#ffe14a;font-size:34px;font-weight:900;text-shadow:0 3px 0 #a3261b,0 0 18px #000;pointer-events:none;opacity:0;transition:opacity .3s}
+#bossbar{position:fixed;top:44px;left:50%;transform:translateX(-50%);width:400px;height:14px;background:#0006;border-radius:7px;display:none}
+#bossbar div{height:100%;background:#e33;border-radius:7px}
+</style></head><body>
+<div id="hud"></div><div id="flash"></div><div id="bossbar"><div></div></div><div id="cnt">1</div>
+<div id="msg"><h1>Math Army 3D</h1>A/D · ←/→ · 마우스 드래그로 좌우 이동 · M 음소거<br>게이트를 골라 병사를 늘리고 적을 막아내세요!<br><br><b>클릭하여 시작</b></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ---- sound (Web Audio synth) ----
+let AC=null,master=null,muted=false,bgmT=null;
+function initAudio(){if(AC)return;AC=new (window.AudioContext||window.webkitAudioContext)();master=AC.createGain();master.gain.value=0.35;master.connect(AC.destination);}
+function tone(f,d,type='square',vol=0.2,slide=0,delay=0){if(!AC||muted)return;const t=AC.currentTime+delay,o=AC.createOscillator(),g=AC.createGain();
+ o.type=type;o.frequency.setValueAtTime(f,t);if(slide)o.frequency.exponentialRampToValueAtTime(Math.max(30,f+slide),t+d);
+ g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(0.001,t+d);o.connect(g);g.connect(master);o.start(t);o.stop(t+d);}
+function noise(d,vol=0.2,delay=0){if(!AC||muted)return;const t=AC.currentTime+delay,b=AC.createBuffer(1,AC.sampleRate*d,AC.sampleRate),a=b.getChannelData(0);
+ for(let i=0;i<a.length;i++)a[i]=(Math.random()*2-1)*(1-i/a.length);const s=AC.createBufferSource(),g=AC.createGain();s.buffer=b;g.gain.value=vol;s.connect(g);g.connect(master);s.start(t);}
+let lastShot=0,lastKill=0,lastHurt=0;
+const SFX={
+ shoot(){const n=performance.now();if(n-lastShot<90)return;lastShot=n;tone(900,0.05,'square',0.04,-500);},
+ kill(){const n=performance.now();if(n-lastKill<50)return;lastKill=n;noise(0.08,0.12);tone(220,0.08,'triangle',0.1,-120);},
+ hurt(){const n=performance.now();if(n-lastHurt<80)return;lastHurt=n;tone(160,0.12,'sawtooth',0.12,-80);},
+ good(){[523,659,784,1047].forEach((f,i)=>tone(f,0.12,'square',0.12,0,i*0.06));},
+ power(){tone(400,0.35,'sawtooth',0.12,800);tone(600,0.35,'square',0.06,900,0.05);},
+ bad(){[400,300,200].forEach((f,i)=>tone(f,0.15,'sawtooth',0.13,0,i*0.08));},
+ boss(){[110,104,98].forEach((f,i)=>tone(f,0.5,'sawtooth',0.2,0,i*0.45));noise(0.6,0.15);},
+ bossHit(){const n=performance.now();if(n-lastShot<120)return;tone(90,0.06,'square',0.08);},
+ clear(){[523,659,784,659,784,1047].forEach((f,i)=>tone(f,0.18,'square',0.14,0,i*0.11));},
+ over(){[392,330,262,196].forEach((f,i)=>tone(f,0.3,'triangle',0.18,0,i*0.22));}
+};
+function startBGM(){stopBGM();if(!AC)return;let step=0;const bass=[110,110,165,147,131,131,165,196],mel=[440,0,523,0,659,587,523,0,440,0,392,440,523,0,0,0];
+ bgmT=setInterval(()=>{if(muted||!running)return;const b=bass[(step>>1)%8];if(step%2==0)tone(b,0.18,'triangle',0.12);
+  const m=mel[step%16];if(m)tone(m*(S&&S.boss?0.94:1),0.12,'square',0.035);if(step%4==2)noise(0.03,0.05);step++;},140);}
+function stopBGM(){if(bgmT)clearInterval(bgmT);bgmT=null;}
+addEventListener('keydown',e=>{if(e.key.toLowerCase()=='m'){muted=!muted;}});
+
+const ROAD=4.5, MAXS=400, MAXE=300, MAXB=400;
+const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(devicePixelRatio);renderer.shadowMap.enabled=true;
+document.body.appendChild(renderer.domElement);
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x87b8e8);scene.fog=new THREE.Fog(0xcfe4f2,45,115);
+const cam=new THREE.PerspectiveCamera(55,1,0.1,200);cam.position.set(0,9,11);cam.lookAt(0,0,-8);
+function resize(){renderer.setSize(innerWidth,innerHeight);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();}
+addEventListener('resize',resize);resize();
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+{ // gradient sky dome
+ const c=document.createElement('canvas');c.width=2;c.height=256;const x=c.getContext('2d');const gr=x.createLinearGradient(0,0,0,256);
+ gr.addColorStop(0,'#3d7fd6');gr.addColorStop(.6,'#9fd0f5');gr.addColorStop(1,'#fdf1d8');x.fillStyle=gr;x.fillRect(0,0,2,256);
+ const t=new THREE.CanvasTexture(c);scene.background=t;}
+scene.add(new THREE.HemisphereLight(0xdff0ff,0x4a6b3a,0.75));
+const sun=new THREE.DirectionalLight(0xfff1d6,1.15);sun.position.set(6,18,10);sun.castShadow=true;
+sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-14,right:14,top:14,bottom:-30,far:60});scene.add(sun);
+function texCanvas(w,h,fn){const c=document.createElement('canvas');c.width=w;c.height=h;fn(c.getContext('2d'),w,h);const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=8;return t;}
+// asphalt with grain + edge lines
+const roadTex=texCanvas(256,256,(x,w,h)=>{x.fillStyle='#6f7079';x.fillRect(0,0,w,h);for(let i=0;i<3000;i++){x.fillStyle=Math.random()<.5?'#62636b':'#80818a';x.fillRect(Math.random()*w,Math.random()*h,2,2);}
+ x.fillStyle='#f4f4f4';x.fillRect(4,0,8,h);x.fillRect(w-12,0,8,h);});roadTex.repeat.set(1,40);
+const road=new THREE.Mesh(new THREE.PlaneGeometry(ROAD*2+1,400),new THREE.MeshStandardMaterial({map:roadTex,roughness:.9}));
+road.rotation.x=-Math.PI/2;road.position.z=-150;road.receiveShadow=true;scene.add(road);
+const grassTex=texCanvas(256,256,(x,w,h)=>{x.fillStyle='#5a9e43';x.fillRect(0,0,w,h);for(let i=0;i<4000;i++){x.fillStyle=['#4f913a','#68b04f','#77bd5a'][i%3];x.fillRect(Math.random()*w,Math.random()*h,2,3);}});grassTex.repeat.set(30,60);
+const grass=new THREE.Mesh(new THREE.PlaneGeometry(200,400),new THREE.MeshStandardMaterial({map:grassTex,roughness:1}));
+grass.rotation.x=-Math.PI/2;grass.position.set(0,-0.01,-150);grass.receiveShadow=true;scene.add(grass);
+// curbs (red/white) along both edges
+[-1,1].forEach(d=>{const ct=texCanvas(64,64,(x)=>{x.fillStyle='#e8e8e8';x.fillRect(0,0,64,32);x.fillStyle='#d23a2f';x.fillRect(0,32,64,32);});ct.repeat.set(1,200);
+ const c=new THREE.Mesh(new THREE.BoxGeometry(0.4,0.15,400),new THREE.MeshStandardMaterial({map:ct}));c.position.set(d*(ROAD+0.7),0.07,-150);c.receiveShadow=true;scene.add(c);});
+const stripes=[];for(let i=0;i<30;i++){const s=new THREE.Mesh(new THREE.PlaneGeometry(0.18,2),new THREE.MeshBasicMaterial({color:0xfff6c8}));
+ s.rotation.x=-Math.PI/2;s.position.set(0,0.01,-i*6);scene.add(s);stripes.push(s);}
+// scrolling trees on both sides
+const trees=[];{const trunkM=new THREE.MeshStandardMaterial({color:0x7a5230}),leafM=[0x3f8f3a,0x4fa244,0x2f7a34].map(c=>new THREE.MeshStandardMaterial({color:c,flatShading:true}));
+ for(let i=0;i<40;i++){const t=new THREE.Group(),s=0.8+Math.random()*0.7;const tr=new THREE.Mesh(new THREE.CylinderGeometry(.15,.22,1.2,6),trunkM);tr.position.y=.6;tr.castShadow=true;t.add(tr);
+  const lf=new THREE.Mesh(Math.random()<.5?new THREE.ConeGeometry(1,2.4,7):new THREE.IcosahedronGeometry(1.1,0),leafM[i%3]);lf.position.y=2.1;lf.castShadow=true;t.add(lf);
+  t.scale.setScalar(s);t.position.set((i%2?1:-1)*(ROAD+2.5+Math.random()*8),0,-i*4.5);scene.add(t);trees.push(t);}}
+// instanced meshes
+const dummy=new THREE.Object3D();
+function inst(geo,col,n){const m=new THREE.InstancedMesh(geo,new THREE.MeshStandardMaterial({color:col,roughness:.55}),n);m.castShadow=true;m.count=0;scene.add(m);return m;}
+const soldierM=inst(new THREE.CylinderGeometry(0.17,0.22,0.7,10),0x2f7cf6,MAXS);
+const headM=inst(new THREE.SphereGeometry(0.17,12,10),0xffd9b0,MAXS);
+const helmM=inst(new THREE.SphereGeometry(0.19,12,8,0,Math.PI*2,0,Math.PI/2),0x1d4fb0,MAXS);
+const gunM=inst(new THREE.BoxGeometry(0.07,0.07,0.45),0x333333,MAXS);
+const enemyM=inst(new THREE.CylinderGeometry(0.22,0.26,0.8,10),0xe0402f,MAXE);
+const ehM=inst(new THREE.SphereGeometry(0.2,12,10),0x7a1a12,MAXE);
+const bulletM=inst(new THREE.SphereGeometry(0.08,6,4),0xffee55,MAXB);bulletM.material=new THREE.MeshBasicMaterial({color:0xffee55});
+// boss
+const boss=new THREE.Group();{const b=new THREE.Mesh(new THREE.BoxGeometry(2.4,3,2),new THREE.MeshLambertMaterial({color:0x5a1010}));b.position.y=1.5;b.castShadow=true;boss.add(b);
+ const h=new THREE.Mesh(new THREE.BoxGeometry(1.4,1.2,1.4),new THREE.MeshLambertMaterial({color:0x991f1f}));h.position.y=3.6;boss.add(h);}
+boss.visible=false;scene.add(boss);
+
+function textTex(txt,bg){const c=document.createElement('canvas');c.width=256;c.height=128;const x=c.getContext('2d');
+ x.fillStyle=bg;x.fillRect(0,0,256,128);x.fillStyle='#fff';x.font='bold 64px "Malgun Gothic"';x.textAlign='center';x.textBaseline='middle';x.fillText(txt,128,68);
+ return new THREE.CanvasTexture(c);}
+// state
+let S,running=false;
+const cntEl=document.getElementById('cnt'),hud=document.getElementById('hud'),msg=document.getElementById('msg'),bb=document.getElementById('bossbar');
+function reset(){
+ for(const g of (S?S.gates:[]))scene.remove(g.mesh);
+ S={count:3,base:100,gatesN:0,px:0,tx:0,dist:0,speed:9,stage:1,dmg:1,rate:0.35,fireT:0,enemies:[],bullets:[],gates:[],nextGate:25,nextEnemy:40,nextMini:130,leak:0,
+   boss:null,stageLen:220,stageStart:0};
+ boss.visible=false;bb.style.display='none';
+}
+// gates
+function opText(o){return o.t=='+'?'+'+o.v:o.t=='-'?'-'+o.v:o.t=='x'?'×'+o.v:o.t=='/'?'÷'+o.v:o.t=='dmg'?'공격력+':'공속+';}
+function randOp(good){const st=S.stage;
+ // growth is tuned down: small +N, rare ×2 (and only while the army is small)
+ if(good){const r=Math.random();if(r<0.6)return{t:'+',v:2+Math.floor(Math.random()*(3+st*2))};if(r<0.72&&S.count<60)return{t:'x',v:2};
+  return Math.random()<0.5?{t:'dmg'}:{t:'rate'};}
+ const r=Math.random();if(r<0.65)return{t:'-',v:3+Math.floor(Math.random()*(5+st*4))+Math.floor(S.count*0.15)};return{t:'/',v:2};}
+function spawnGate(){const good=Math.random()<0.5;S.gatesN++;const ops=(S.gatesN<=2||Math.random()<0.25)?[randOp(true),randOp(true)]:[randOp(good),randOp(!good)];
+ const grp=new THREE.Group();
+ ops.forEach((o,i)=>{const bad=o.t=='-'||o.t=='/';const col=bad?'#d0342c':(o.t=='dmg'||o.t=='rate')?'#e09b18':'#2a9df4';
+  const p=new THREE.Mesh(new THREE.PlaneGeometry(ROAD-0.2,2.4),new THREE.MeshBasicMaterial({map:textTex(opText(o),col),transparent:true,opacity:0.85,side:2}));
+  p.position.set((i?1:-1)*ROAD/2,1.4,0);grp.add(p);});
+ const post=new THREE.Mesh(new THREE.BoxGeometry(0.2,2.8,0.2),new THREE.MeshLambertMaterial({color:0xffffff}));post.position.y=1.4;grp.add(post);
+ grp.position.z=-90;scene.add(grp);S.gates.push({mesh:grp,ops,z:-90});}
+function applyOp(o){if(o.t=='-'||o.t=='/')SFX.bad();else if(o.t=='dmg'||o.t=='rate')SFX.power();else SFX.good();if(o.t=='+')S.count+=o.v;else if(o.t=='-')S.count-=o.v;else if(o.t=='x')S.count*=o.v;else if(o.t=='/')S.count=Math.ceil(S.count/o.v);
+ else if(o.t=='dmg')S.dmg+=0.5;else S.rate=Math.max(0.08,S.rate*0.8);}
+function spawnEnemies(){const early=S.stage==1&&S.dist<110;const n=early?Math.min(2+Math.floor(S.count*0.5),3+Math.floor(Math.random()*3)):Math.min(140,Math.floor(2+S.stage*3+Math.random()*S.stage*5+S.count*0.35)),cx=(Math.random()*2-1)*(ROAD-1.5);
+ for(let i=0;i<n;i++){const a=i*2.4,r=0.35*Math.sqrt(i);S.enemies.push({x:Math.max(-ROAD,Math.min(ROAD,cx+Math.cos(a)*r)),z:-90+Math.sin(a)*r,hp:1+S.stage*0.6});}}
+// mid-boss: tanky ogre that walks with the road; blocks and chews the army, big penalty if it slips past
+const miniPool=[];
+function miniMesh(){let m=miniPool.find(o=>!o.visible);if(m){m.visible=true;return m;}
+ m=new THREE.Group();const skin=new THREE.MeshStandardMaterial({color:0x7a3fa0,roughness:.6});
+ const body=new THREE.Mesh(new THREE.SphereGeometry(0.9,16,12),skin);body.scale.set(1,1.15,.9);body.position.y=1.1;body.castShadow=true;m.add(body);
+ const head=new THREE.Mesh(new THREE.SphereGeometry(0.5,14,10),skin);head.position.y=2.25;head.castShadow=true;m.add(head);
+ const hornM=new THREE.MeshStandardMaterial({color:0xfff2d0});[-1,1].forEach(d=>{const h=new THREE.Mesh(new THREE.ConeGeometry(0.12,0.45,8),hornM);h.position.set(d*0.32,2.65,0);h.rotation.z=-d*0.4;m.add(h);});
+ const eyeM=new THREE.MeshBasicMaterial({color:0xffee33});[-1,1].forEach(d=>{const e=new THREE.Mesh(new THREE.SphereGeometry(0.08,8,6),eyeM);e.position.set(d*0.18,2.3,0.45);m.add(e);});
+ const club=new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.25,1.6,8),new THREE.MeshStandardMaterial({color:0x6b4a2a}));club.position.set(1,1.4,0.2);club.rotation.z=-0.5;m.add(club);
+ const bar=new THREE.Mesh(new THREE.PlaneGeometry(1.6,0.14),new THREE.MeshBasicMaterial({color:0xff3333}));bar.position.y=3.1;m.add(bar);m.userData.bar=bar;
+ scene.add(m);miniPool.push(m);return m;}
+function spawnMini(){const hp=15+S.stage*20+S.count*1.0;S.enemies.push({x:(Math.random()*2-1)*(ROAD-1.5),z:-90,hp,max:hp,mini:1,mesh:miniMesh()});flash('⚠ 중간보스 출현!');}
+let flashT=0;function flash(t){const el=document.getElementById('flash');el.textContent=t;el.style.opacity=1;flashT=1.2;}
+// soldier formation offsets (spiral)
+const form=[];for(let i=0;i<MAXS;i++){const a=i*2.39996,r=0.32*Math.sqrt(i);form.push([Math.cos(a)*r,Math.sin(a)*r]);}
+function crowdR(){return 0.32*Math.sqrt(Math.min(S.count,MAXS));}
+// input
+const keys={};addEventListener('keydown',e=>keys[e.key.toLowerCase()]=1);addEventListener('keyup',e=>keys[e.key.toLowerCase()]=0);
+let drag=null;addEventListener('pointerdown',e=>{drag={x:e.clientX,p:S?S.tx:0};});addEventListener('pointerup',()=>drag=null);
+addEventListener('pointermove',e=>{if(drag&&running)S.tx=drag.p+(e.clientX-drag.x)/innerWidth*ROAD*3;});
+msg.onclick=()=>{initAudio();AC.resume();reset();running=true;msg.style.display='none';startBGM();};
+function end(win){running=false;SFX.over();try{parent.postMessage({type:"arcade-score",game:"run",score:Math.floor(S.dist),detail:"스테이지 "+S.stage},"*")}catch(e){}msg.style.display='flex';msg.innerHTML=`<h1>게임 오버</h1>${S.base<=0?'기지가 무너졌습니다<br>':'병사가 전멸했습니다<br>'}스테이지 ${S.stage} 도달<br><br><b>클릭하여 재시작</b>`;}
+
+let last=performance.now();
+function tick(now){const dt=Math.min(0.05,(now-last)/1000);last=now;if(running)update(dt);render();requestAnimationFrame(tick);}
+function update(dt){
+ if(flashT>0){flashT-=dt;if(flashT<=0)document.getElementById('flash').style.opacity=0;}
+ const mv=S.speed*dt*(S.boss?0.0:1);S.dist+=mv;
+ if(keys['a']||keys['arrowleft'])S.tx-=9*dt;if(keys['d']||keys['arrowright'])S.tx+=9*dt;
+ const lim=Math.max(0.3,ROAD-crowdR());S.tx=Math.max(-lim,Math.min(lim,S.tx));S.px+=(S.tx-S.px)*Math.min(1,dt*12);
+ for(const s of stripes){s.position.z+=mv;if(s.position.z>10)s.position.z-=180;}
+ for(const t of trees){t.position.z+=mv;if(t.position.z>14)t.position.z-=180;}
+ roadTex.offset.y+=mv/10;grassTex.offset.y+=mv*60/400;
+ const inStage=S.dist-S.stageStart;
+ // spawning
+ if(!S.boss&&inStage<S.stageLen){
+  if(S.dist>S.nextGate){spawnGate();S.nextGate=S.dist+28+Math.random()*10;}
+  if(S.dist>S.nextEnemy&&inStage>30){spawnEnemies();S.nextEnemy=S.dist+35+Math.random()*15;}
+  if(S.dist>S.nextMini&&inStage>50){spawnMini();S.nextMini=S.dist+60+Math.random()*20;}}
+ if(!S.boss&&inStage>=S.stageLen+60&&!S.enemies.length){S.boss={z:-60,hp:150*S.stage*S.stage+100,max:0,t:0};S.boss.max=S.boss.hp;boss.visible=true;bb.style.display='block';SFX.boss();
+  S.gates.forEach(g=>scene.remove(g.mesh));S.gates=[];}
+ // gates
+ for(const g of S.gates){g.z+=mv;g.mesh.position.z=g.z;
+  if(!g.done&&g.z>=0){g.done=1;applyOp(g.ops[S.px<0?0:1]);g.mesh.children.forEach((c,i)=>{if(i<2&&i!=(S.px<0?0:1))c.visible=false;});}
+  if(g.z>12){scene.remove(g.mesh);g.dead=1;}}
+ S.gates=S.gates.filter(g=>!g.dead);
+ // shooting
+ S.fireT-=dt;if(S.fireT<=0&&S.count>0){S.fireT=S.rate;SFX.shoot();const shots=Math.min(S.count,25),per=S.dmg*Math.max(1,S.count/25);
+  for(let i=0;i<shots;i++){const f=form[Math.floor(Math.random()*Math.min(S.count,MAXS))];if(S.bullets.length<MAXB)S.bullets.push({x:S.px+f[0],z:f[1]-0.3,d:per,life:1.3});}}
+ for(const b of S.bullets){b.z-=40*dt;b.life-=dt;if(b.life<=0)b.dead=1;}
+ // enemies
+ const R=crowdR()+0.3;
+ for(const e of S.enemies){e.z+=mv+2.5*dt;e.x+=Math.sign(S.px-e.x)*1.2*dt*(e.z>-25?1:0);
+  if(!e.mini&&Math.abs(e.z)<R&&Math.abs(e.x-S.px)<R){e.dead=1;S.count--;SFX.hurt();}
+  // enemy slipped past the army → penalty
+  if(!e.dead&&e.z>R+0.5){e.dead=1;const p=e.mini?30:5;S.base=Math.max(0,S.base-p);SFX.hurt();flash(e.mini?'중간보스 돌파! 기지 -'+p:'적 돌파! 기지 -'+p);}}
+ for(const e of S.enemies)if(e.mini&&!e.dead&&Math.abs(e.z)<R+0.8&&Math.abs(e.x-S.px)<R+0.8){e.t=(e.t||0)-dt;if(e.t<=0){e.t=0.12;S.count-=Math.ceil(S.stage);SFX.hurt();}e.z-=mv+2.5*dt-0.5*dt;}
+ for(const b of S.bullets){if(b.dead)continue;
+  for(const e of S.enemies){const hr=e.mini?1:0.45;if(!e.dead&&Math.abs(e.z-b.z)<hr+0.05&&Math.abs(e.x-b.x)<hr){e.hp-=b.d;b.dead=1;if(e.hp<=0){e.dead=1;SFX.kill();}break;}}
+  if(!b.dead&&S.boss&&Math.abs(b.z-S.boss.z)<1.2&&Math.abs(b.x)<1.6){S.boss.hp-=b.d;b.dead=1;SFX.bossHit();}}
+ S.bullets=S.bullets.filter(b=>!b.dead);S.enemies=S.enemies.filter(e=>!e.dead);
+ // boss
+ if(S.boss){const B=S.boss;B.z=Math.min(-R-1.2,B.z+2*dt);boss.position.set(0,0,B.z);
+  if(B.z>=-R-1.3){B.t-=dt;if(B.t<=0){B.t=0.15;SFX.hurt();S.count-=Math.ceil(S.stage*1.5);}}
+  bb.firstChild.style.width=Math.max(0,B.hp/B.max*100)+'%';
+  if(B.hp<=0){SFX.clear();S.boss=null;boss.visible=false;bb.style.display='none';S.stage++;S.stageStart=S.dist;S.nextGate=S.dist+10;S.nextEnemy=S.dist+40;S.nextMini=S.dist+55;S.base=Math.min(100,S.base+30);flash("스테이지 클리어! 기지 +30");}}
+ S.count=Math.min(S.count,99999);if(S.count<=0||S.base<=0){S.count=Math.max(0,S.count);end();}
+}
+function render(){
+ if(S){const n=Math.min(S.count,MAXS),t=performance.now()/120;
+  for(let i=0;i<n;i++){const f=form[i],bob=Math.abs(Math.sin(t+i))*0.08;
+   dummy.position.set(S.px+f[0],0.35+bob,f[1]);dummy.updateMatrix();soldierM.setMatrixAt(i,dummy.matrix);
+   dummy.position.y=0.85+bob;dummy.updateMatrix();headM.setMatrixAt(i,dummy.matrix);
+   dummy.position.y=0.9+bob;dummy.updateMatrix();helmM.setMatrixAt(i,dummy.matrix);
+   dummy.position.set(S.px+f[0]+0.2,0.55+bob,f[1]-0.25);dummy.updateMatrix();gunM.setMatrixAt(i,dummy.matrix);}
+  soldierM.count=headM.count=helmM.count=gunM.count=n;[soldierM,headM,helmM,gunM].forEach(o=>o.instanceMatrix.needsUpdate=true);
+  miniPool.forEach(o=>o.visible=false);
+  for(const e of S.enemies)if(e.mini&&!e.dead){const o=e.mesh;o.visible=true;o.position.set(e.x,Math.abs(Math.sin(performance.now()/200))*0.15,e.z);
+   o.userData.bar.scale.x=Math.max(0.01,e.hp/e.max);o.userData.bar.lookAt(cam.position);}
+  const grunts=S.enemies.filter(e=>!e.mini);
+  const m=Math.min(grunts.length,MAXE);for(let i=0;i<m;i++){const e=grunts[i];dummy.position.set(e.x,0.4,e.z);dummy.updateMatrix();enemyM.setMatrixAt(i,dummy.matrix);
+   dummy.position.y=0.95;dummy.updateMatrix();ehM.setMatrixAt(i,dummy.matrix);}
+  enemyM.count=ehM.count=m;enemyM.instanceMatrix.needsUpdate=ehM.instanceMatrix.needsUpdate=true;
+  const k=S.bullets.length;for(let i=0;i<k;i++){const b=S.bullets[i];dummy.position.set(b.x,0.6,b.z);dummy.updateMatrix();bulletM.setMatrixAt(i,dummy.matrix);}
+  bulletM.count=k;bulletM.instanceMatrix.needsUpdate=true;
+  cam.position.x+=(S.px*0.5-cam.position.x)*0.1;cam.lookAt(S.px*0.5,0,-8);
+  const p=new THREE.Vector3(S.px,1.6+crowdR()*0.3,0).project(cam);
+  cntEl.style.left=(p.x+1)/2*innerWidth+'px';cntEl.style.top=(1-p.y)/2*innerHeight+'px';cntEl.textContent=S.count;
+  const prog=S.boss?'BOSS!':Math.min(100,Math.floor((S.dist-S.stageStart)/(S.stageLen+60)*100))+'%';
+  hud.textContent=`🏠 기지 ${S.base}  ·  스테이지 ${S.stage}  ·  진행 ${prog}  ·  공격력 ${S.dmg.toFixed(1)}  ·  공속 ${(1/S.rate).toFixed(1)}/s`;}
+ renderer.render(scene,cam);}
+reset();requestAnimationFrame(tick);
+</script></body></html>

@@ -1,0 +1,29 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 랭킹 컬렉션 4개만 열고 나머지는 전부 차단
+    match /{col}/{id} {
+      function maxScore() {
+        return {'scores_poop': 100000, 'scores_run': 1000000,
+                'scores_def': 1000000, 'scores_poker': 100000000000}[col];
+      }
+      function isBoard() {
+        return col in ['scores_poop', 'scores_poker', 'scores_run', 'scores_def'];
+      }
+      allow read: if isBoard();
+      // 새 기록 추가만 허용: 정해진 필드, 이니셜 3글자, 점수 상한, 서버 시각
+      allow create: if isBoard()
+        && request.resource.data.keys().hasOnly(['ini', 'score', 'detail', 't'])
+        && request.resource.data.ini is string
+        && request.resource.data.ini.matches('^[A-Z0-9?]{3}$')
+        && request.resource.data.score is int
+        && request.resource.data.score > 0
+        && request.resource.data.score <= maxScore()
+        && request.resource.data.detail is string
+        && request.resource.data.detail.size() <= 40
+        && request.resource.data.t == request.time;
+      // 수정·삭제는 아무도 못 함 (관리자는 Firebase 콘솔에서 직접 삭제)
+      allow update, delete: if false;
+    }
+  }
+}

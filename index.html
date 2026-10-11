@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+</head><body>
+<title>동전 오락실</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Gowun+Dodum&display=swap">
+<style>
+/* Layout: one arcade-cabinet marquee, then a grid of game "cartridges"; picking one swaps the screen for that game */
+:root{color-scheme:dark;
+ --bg:#14101f;--panel:#1f1830;--line:#3b2f57;--fg:#f4eefc;--muted:#a99cc4;--coin:#ffc93c;
+ --display:"Black Han Sans","Malgun Gothic",sans-serif;--body:"Gowun Dodum","Malgun Gothic",sans-serif}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);margin:0}
+#home{max-width:980px;margin:0 auto;padding-inline:16px;padding-block:28px 40px;display:flex;flex-direction:column;gap:24px}
+header{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;border-bottom:2px dashed var(--line);padding-bottom:16px}
+h1{font-family:var(--display);font-weight:400;font-size:clamp(40px,8vw,68px);line-height:1;margin:0;letter-spacing:.02em;text-wrap:balance}
+h1 span{color:var(--coin)}
+.credit{font-size:14px;color:var(--muted);letter-spacing:.08em}
+.credit b{color:var(--coin);font-variant-numeric:tabular-nums}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+@media (max-width:640px){.grid{grid-template-columns:1fr}}
+.game{all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;background:var(--panel);border:2px solid var(--line);border-radius:14px;overflow:hidden;transition:transform .15s,border-color .15s}
+.game:hover,.game:focus-visible{transform:translateY(-3px);border-color:var(--coin)}
+.game:focus-visible{outline:3px solid var(--coin);outline-offset:3px}
+.art{aspect-ratio:16/8;max-width:100%;display:block;width:100%}
+.info{padding:14px 16px 16px;display:flex;flex-direction:column;gap:6px}
+.info h2{font-family:var(--display);font-weight:400;font-size:26px;margin:0}
+.info p{margin:0;color:var(--muted);font-size:15px;line-height:1.5}
+.tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.tag{font-size:12px;padding:3px 8px;border-radius:99px;border:1px solid var(--line);color:var(--muted);letter-spacing:.04em}
+.tag.ok{border-color:#3fbf7a;color:#7fe3ab}
+#play{position:fixed;inset:0;background:#000;display:flex;flex-direction:column}
+#play[hidden]{display:none}
+#bar{display:flex;align-items:center;gap:12px;padding:8px 12px;padding-top:calc(8px + env(safe-area-inset-top,0px));background:var(--panel);border-bottom:2px solid var(--line)}
+#back{font-family:var(--body);font-size:15px;font-weight:700;background:var(--coin);color:#1a1200;border:0;border-radius:8px;padding:8px 14px;cursor:pointer}
+#back:focus-visible{outline:3px solid var(--fg)}
+#now{font-family:var(--display);font-size:20px}
+iframe{flex:1;border:0;width:100%;background:#000}
+#hall{display:flex;flex-direction:column;gap:12px;border-top:2px dashed var(--line);padding-top:20px}
+.hallhead{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.hallhead h2{font-family:var(--display);font-weight:400;font-size:30px;margin:0;color:var(--coin)}
+.note{font-size:13px;color:var(--muted)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tabs button{font-family:var(--body);font-size:14px;font-weight:700;background:var(--panel);color:var(--muted);border:2px solid var(--line);border-radius:99px;padding:6px 14px;cursor:pointer}
+.tabs button[aria-selected="true"]{border-color:var(--coin);color:var(--fg)}
+.board{list-style:none;margin:0;padding:0;display:grid;gap:4px;font-variant-numeric:tabular-nums}
+.board li{display:grid;grid-template-columns:2.4em 4em 1fr auto;gap:10px;align-items:center;background:var(--panel);border-radius:8px;padding:8px 12px;font-size:15px}
+.board li .rk{font-family:var(--display);color:var(--muted)}
+.board li:nth-child(1) .rk{color:var(--coin)}.board li:nth-child(2) .rk{color:#d8d8e8}.board li:nth-child(3) .rk{color:#e0a070}
+.board li .in{font-family:var(--display);font-size:18px;letter-spacing:.12em}
+.board li .dt{color:var(--muted);font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.board li .sc{font-weight:700}
+.board li.me{outline:2px solid var(--coin)}
+.board .empty{grid-template-columns:1fr;color:var(--muted);text-align:center}
+.board.small li{padding:5px 10px;font-size:13px}
+#rec{position:fixed;inset:0;z-index:20;background:#000a;display:flex;align-items:center;justify-content:center;padding:16px}
+#rec[hidden]{display:none}
+#recBox{background:var(--panel);border:3px solid var(--coin);border-radius:16px;padding:20px;width:100%;max-width:400px;display:flex;flex-direction:column;gap:10px;max-height:90vh;overflow-y:auto;box-sizing:border-box}
+.recTitle{font-family:var(--display);font-size:34px;color:var(--coin);text-align:center}
+.recScore{font-family:var(--display);font-size:44px;text-align:center;font-variant-numeric:tabular-nums}
+.recDetail{text-align:center;color:var(--muted)}
+#recEntry{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center}
+#recEntry label{width:100%;text-align:center;font-size:13px;color:var(--muted)}
+#ini{font-family:var(--display);font-size:32px;width:4.2em;text-align:center;letter-spacing:.2em;text-transform:uppercase;background:var(--bg);color:var(--fg);border:2px solid var(--line);border-radius:10px;padding:4px}
+#ini:focus{outline:none;border-color:var(--coin)}
+#recSave,#recClose{font-family:var(--body);font-weight:700;font-size:16px;border:0;border-radius:10px;padding:10px 18px;cursor:pointer}
+#recSave{background:var(--coin);color:#1a1200}
+#recClose{background:transparent;color:var(--muted);border:2px solid var(--line)}
+#recSave:focus-visible,#recClose:focus-visible,.tabs button:focus-visible{outline:3px solid var(--fg)}
+@media (prefers-reduced-motion:reduce){.game{transition:none}.game:hover{transform:none}}
+</style>
+
+<div id="home">
+ <header><h1>동전 <span>오락실</span></h1><div class="credit">INSERT COIN · CREDIT <b>04</b></div></header>
+ <div class="grid" id="grid"></div>
+ <section id="hall">
+  <div class="hallhead"><h2>명예의 전당</h2><span class="note">이 기기에 저장된 TOP 10</span></div>
+  <div class="tabs" id="tabs" role="tablist"></div>
+  <ol class="board" id="board"></ol>
+ </section>
+</div>
+<div id="rec" hidden><form id="recBox">
+ <div class="recTitle" id="recTitle">NEW RECORD!</div>
+ <div class="recScore" id="recScore"></div>
+ <div class="recDetail" id="recDetail"></div>
+ <div id="recEntry"><label for="ini">이니셜 3글자</label><input id="ini" maxlength="3" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="AAA">
+  <button type="submit" id="recSave">저장</button></div>
+ <ol class="board small" id="recBoard"></ol>
+ <button type="button" id="recClose">닫기</button>
+</form></div>
+<div id="play" hidden><div id="bar"><button id="back">← 오락실로</button><span id="now"></span></div><iframe id="frame" allow="autoplay; fullscreen" title="게임 화면"></iframe></div>
+
+<script src="firebase-config.js"></script>
+<script>
+const GAMES=[
+ {id:'poop',file:'games/PoopCatch.html',name:'냥똥 받기',desc:'뒤돌아 앉은 하얀 고양이가 뿌직 떨어뜨리는 똥을 손으로 받아내세요. 황금똥은 체력 회복.',tags:[['PC · 모바일','ok'],['마우스 · 터치 · A/D']],art:'poop'},
+ {id:'poker',file:'games/AptPoker.html',name:'영끌 포커',desc:'잭스 오어 베터 포커. 이기면 더블 판돈이 상계주공에서 원베일리까지 올라갑니다.',tags:[['PC · 모바일','ok'],['터치 · 키보드']],art:'poker'},
+ {id:'run',file:'games/Runner3D.html',name:'산수 군단 3D',desc:'좌우로 움직이며 +, ×, ÷ 게이트를 골라 병사를 불리고 보스를 쓰러뜨리는 3D 러너.',tags:[['PC 권장'],['A/D · 드래그']],art:'run'},
+ {id:'def',file:'games/TopDefense.html',name:'영주 디펜스',desc:'성 위의 영주가 활을 쏘고, 병사를 소환해 웨이브를 막아내세요. 5발 방사형 활과 폭탄 아이템까지.',tags:[['PC 권장'],['클릭 · 1~3 · Q~Y']],art:'def'}];
+const grid=document.getElementById('grid');
+GAMES.forEach(g=>{const b=document.createElement('button');b.className='game';b.id='g-'+g.id;
+ b.innerHTML=`<canvas class="art" width="640" height="320"></canvas><div class="info"><h2>${g.name}</h2><p>${g.desc}</p><div class="tags">${g.tags.map(t=>`<span class="tag ${t[1]||''}">${t[0]}</span>`).join('')}</div></div>`;
+ b.onclick=()=>open(g);grid.appendChild(b);draw(b.querySelector('canvas'),g.art);});
+const play=document.getElementById('play'),frame=document.getElementById('frame');
+function open(g){frame.src=g.file;document.getElementById('now').textContent=g.name;play.hidden=false;document.getElementById('home').hidden=true;try{history.replaceState(null,'','#'+g.id)}catch(e){}frame.focus();}
+document.getElementById('back').onclick=()=>{frame.src='about:blank';play.hidden=true;document.getElementById('home').hidden=false;try{history.replaceState(null,'','#')}catch(e){}};
+const start=GAMES.find(g=>'#'+g.id==location.hash);if(start)open(start);
+
+// ---------- hall of fame (top 10 per game, kept in this browser) ----------
+const won=v=>{const e=Math.floor(v/10000),m=v%10000;return (e?e.toLocaleString()+'억':'')+(m?(e?' ':'')+m.toLocaleString()+'만':'')+'원';};
+const RANKED={poop:{fmt:v=>v.toLocaleString()+'점'},poker:{fmt:won},run:{fmt:v=>v.toLocaleString()+'m'},def:{fmt:v=>v.toLocaleString()+'점'}};
+const KEY='arcade-hof-v1';
+function loadHof(){try{return JSON.parse(localStorage.getItem(KEY))||{}}catch(e){return {}}}
+function saveHof(h){try{localStorage.setItem(KEY,JSON.stringify(h))}catch(e){}}
+let hof=loadHof(),tab='poop',pending=null;
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function boardHTML(game,hi){const list=hof[game]||[],f=RANKED[game].fmt;
+ if(!list.length)return '<li class="empty">아직 기록이 없어요. 첫 번째 주인공이 되어보세요!</li>';
+ return list.map((r,i)=>`<li class="${i===hi?'me':''}"><span class="rk">${i+1}</span><span class="in">${esc(r.ini)}</span><span class="dt">${esc(r.detail||'')}</span><span class="sc">${f(r.score)}</span></li>`).join('');}
+function renderHall(){const t=document.getElementById('tabs');
+ t.innerHTML=Object.keys(RANKED).map(k=>`<button role="tab" id="tab-${k}" aria-selected="${k==tab}" data-k="${k}">${GAMES.find(g=>g.id==k).name}</button>`).join('');
+ document.getElementById('board').innerHTML=boardHTML(tab);}
+document.getElementById('tabs').onclick=e=>{const b=e.target.closest('button');if(b){tab=b.dataset.k;renderHall();}};
+renderHall();
+function rankOf(game,score){const l=hof[game]||[];let i=l.findIndex(r=>score>r.score);if(i<0)i=l.length;return i<10?i:-1;}
+const rec=document.getElementById('rec'),ini=document.getElementById('ini');
+addEventListener('message',e=>{const d=e.data;if(!d||d.type!=='arcade-score'||!RANKED[d.game]||e.source!==frame.contentWindow)return;
+ const score=Math.max(0,Math.floor(+d.score||0));if(!score)return;
+ const r=rankOf(d.game,score);pending=r>=0?{game:d.game,score,detail:String(d.detail||'').slice(0,40)}:null;
+ document.getElementById('recTitle').textContent=r>=0?`NEW RECORD! ${r+1}위`:'GAME OVER';
+ document.getElementById('recScore').textContent=RANKED[d.game].fmt(score);
+ document.getElementById('recDetail').textContent=(d.detail||'')+(r<0?' · TOP 10 밖이에요':'');
+ document.getElementById('recEntry').hidden=r<0;
+ document.getElementById('recBoard').innerHTML=boardHTML(d.game);recGame=d.game;
+ rec.hidden=false;if(r>=0){ini.value='';setTimeout(()=>ini.focus(),50);}});
+ini.addEventListener('input',()=>{ini.value=ini.value.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,3);});
+let recGame=null,saving=false;
+document.getElementById('recBox').addEventListener('submit',async e=>{e.preventDefault();if(!pending||saving)return;
+ const v=(ini.value||'???').padEnd(3,'?'),p=pending,at=rankOf(p.game,p.score),row={ini:v,score:p.score,detail:p.detail};
+ const title=document.getElementById('recTitle');
+ if(FB){saving=true;document.getElementById('recSave').disabled=true;title.textContent='저장 중…';
+  try{await FB.collection('scores_'+p.game).add({...row,t:firebase.firestore.FieldValue.serverTimestamp()});}
+  catch(err){title.textContent='저장 실패 — 잠시 후 다시 눌러주세요';saving=false;document.getElementById('recSave').disabled=false;return;}
+  saving=false;document.getElementById('recSave').disabled=false;}
+ else{const l=hof[p.game]||[];l.splice(at,0,{...row,t:Date.now()});hof[p.game]=l.slice(0,10);saveHof(hof);}
+ document.getElementById('recEntry').hidden=true;title.textContent=`${at+1}위 저장 완료!`;
+ document.getElementById('recBoard').innerHTML=boardHTML(p.game,FB?-1:at);tab=p.game;renderHall();pending=null;document.getElementById('recClose').focus();});
+document.getElementById('recClose').onclick=()=>{rec.hidden=true;pending=null;recGame=null;frame.focus();};
+
+// ---------- shared leaderboard (Firebase) — only when firebase-config.js provides a config ----------
+// Inside a Claude artifact outside hosts are blocked, so this stays off there and the per-device board above is used.
+let FB=null;
+function loadScript(src){return new Promise((ok,no)=>{const s=document.createElement('script');s.src=src;s.onload=ok;s.onerror=no;document.head.appendChild(s);});}
+async function initShared(){const cfg=window.FIREBASE_CONFIG;if(!cfg||!cfg.projectId)return;
+ try{await loadScript('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');await loadScript('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js');
+  firebase.initializeApp(cfg);FB=firebase.firestore();}catch(e){FB=null;return;}
+ hof={};document.querySelector('#hall .note').textContent='모두가 함께 보는 TOP 10 · 실시간';
+ Object.keys(RANKED).forEach(g=>FB.collection('scores_'+g).orderBy('score','desc').limit(10).onSnapshot(s=>{
+  hof[g]=s.docs.map(d=>d.data()).filter(r=>typeof r.ini=='string'&&typeof r.score=='number').map(r=>({ini:r.ini.slice(0,3),score:r.score,detail:String(r.detail||'').slice(0,40)}));
+  renderHall();if(recGame===g&&!rec.hidden)document.getElementById('recBoard').innerHTML=boardHTML(g);
+ },()=>{}));}
+initShared();
+
+// little cover art for each cartridge
+function draw(c,k){const x=c.getContext('2d'),W=640,H=320;const E=(a,b,rx,ry,f)=>{x.beginPath();x.ellipse(a,b,rx,ry,0,0,7);x.fillStyle=f;x.fill();};
+ if(k=='poop'){x.fillStyle='#fde7ef';x.fillRect(0,0,W,H);x.fillStyle='#c98d5b';x.fillRect(0,120,W,18);
+  E(320,95,70,40,'#fff');E(350,50,40,32,'#fff');x.fillStyle='#ff9fb8';x.fillRect(312,104,16,4);x.fillRect(318,98,4,16);
+  [[200,200],[440,230],[300,250]].forEach(([a,b])=>{E(a,b+12,22,9,'#8a5a2e');E(a,b,16,9,'#8a5a2e');E(a,b-10,10,7,'#8a5a2e');});
+  E(330,300,70,30,'#ffd2b0');x.fillStyle='#ffd2b0';[-45,-15,15,45].forEach(d=>x.fillRect(318+d,262,24,40));}
+ if(k=='poker'){x.fillStyle='#003a12';x.fillRect(0,0,W,H);
+  ['A♠','K♥','Q♦','J♣','10♠'].forEach((t,i)=>{const cx=70+i*104;x.save();x.translate(cx+40,170);x.rotate((i-2)*0.08);
+   x.fillStyle='#fff';x.fillRect(-40,-60,80,120);x.fillStyle=t.match(/[♥♦]/)?'#d40000':'#111';x.font='bold 34px sans-serif';x.textAlign='center';x.fillText(t,0,12);x.restore();});
+  x.fillStyle='#ffd23f';x.font='28px "Black Han Sans",sans-serif';x.textAlign='center';x.fillText('DOUBLE → 원베일리 84㎡',W/2,290);}
+ if(k=='run'){const gr=x.createLinearGradient(0,0,0,H);gr.addColorStop(0,'#87b8e8');gr.addColorStop(1,'#5fa24a');x.fillStyle=gr;x.fillRect(0,0,W,H);
+  x.fillStyle='#8d8d96';x.beginPath();x.moveTo(270,60);x.lineTo(370,60);x.lineTo(560,H);x.lineTo(80,H);x.fill();
+  x.fillStyle='#2a9df4cc';x.fillRect(190,110,120,60);x.fillStyle='#d0342ccc';x.fillRect(330,110,120,60);
+  x.fillStyle='#fff';x.font='bold 40px sans-serif';x.textAlign='center';x.fillText('×2',250,155);x.fillText('-8',390,155);
+  for(let i=0;i<30;i++){const a=i*2.4,r=7*Math.sqrt(i);E(320+Math.cos(a)*r*1.6,270+Math.sin(a)*r*0.6,7,9,'#2f7cf6');}}
+ if(k=='def'){x.fillStyle='#6fae5a';x.fillRect(0,0,W,H);x.fillStyle='#8a8f9c';x.fillRect(30,60,110,240);x.fillStyle='#6b707c';for(let i=0;i<4;i++)x.fillRect(30+i*30,42,20,22);
+  E(110,110,14,14,'#ffcf3f');[[220,170,'#4fa3ff'],[250,230,'#ffd34f'],[200,260,'#c07bff']].forEach(([a,b,c])=>{x.fillStyle=c;x.fillRect(a,b,26,26);});
+  [[430,150,14],[480,220,12],[520,180,20],[560,260,13],[450,270,11]].forEach(([a,b,r])=>E(a,b,r,r,'#e0533d'));}
+}
+</script>
+
+</body></html>

@@ -19,7 +19,8 @@ body.port button .k{display:none}
 /* full-screen layout: canvas takes all remaining space; button pad on the right (landscape) or a slim bar at the bottom (portrait) */
 html,body{height:100%;overflow:hidden}
 body{display:flex!important;flex-direction:row!important;align-items:stretch!important;padding:0!important;gap:0}
-#stage{flex:1;min-width:0;min-height:0;display:flex;align-items:center;justify-content:center}
+#stage{flex:1;min-width:0;min-height:0;display:flex;align-items:center;justify-content:center;padding-top:calc(env(safe-area-inset-top,0px) + 8px);box-sizing:border-box}
+body.port #stage{padding-top:calc(env(safe-area-inset-top,0px) + 44px)}
 #stage canvas{margin:0!important;max-width:none!important;max-height:none!important;border-radius:6px}
 #ui{display:grid!important;grid-template-columns:1fr!important;grid-auto-rows:min-content;align-content:center;width:132px!important;max-width:none!important;margin:0!important;padding:6px;gap:4px!important;box-sizing:border-box;overflow-y:auto;background:#1d1710}
 #ui h4,#info{display:none!important}
@@ -55,14 +56,13 @@ const UPS=[
  {key:'w',ic:'⚡',sh:'영주공속',name:'영주 공속',lv:'rate',max:15,cost:l=>60+l*45,apply:()=>S.lordRate*=.87},
  {key:'e',ic:'🏰',sh:'성벽',name:'성벽 강화',lv:'wall',max:99,cost:l=>50+l*40,apply:()=>{S.castleMax+=100;S.castle=Math.min(S.castleMax,S.castle+150)}},
  {key:'r',ic:'🎯',sh:'멀티샷',name:'영주 멀티샷',lv:'multi',max:4,cost:l=>[1200,2500,4500,8000][l],label:l=>l<4?(l+2)+'발 활':'5발 MAX',apply:()=>S.arrows++},
- {key:'u',ic:'🏹',sh:'타워궁수',name:'타워 궁수 추가',lv:'tarch',max:3,cost:l=>[150,320,600][l],label:l=>l<3?'궁수 '+(l+2)+'명':'궁수 4 MAX',apply:()=>S.tArch++},
  {key:'t',ic:'🗡️',sh:'병사공격',name:'병사 공격력',lv:'uatk',max:99,cost:l=>70+l*55,apply:()=>{S.uAtk+=.2;S.units.forEach(u=>u.dmg=u.base.dmg*S.uAtk)}},
  {key:'y',ic:'❤️',sh:'병사체력',name:'병사 체력',lv:'uhp',max:99,cost:l=>70+l*55,apply:()=>{S.uHp+=.25;S.units.forEach(u=>{const r=u.hp/u.max;u.max=u.base.hp*S.uHp;u.hp=u.max*r;})}}];
 function reset(go){S={started:!!go,gold:90,wave:1,castle:300,castleMax:300,lordDmg:10,lordRate:1,lordT:0,arrows:1,tArch:1,uAtk:1,uHp:1,income:2,incT:0,
  units:[],enemies:[],shots:[],fx:[],items:[],bombs:1,spawnLeft:0,spawnT:0,waveT:3,over:false,paused:false,kills:0,shake:0,t:0,
  lv:{dmg:0,rate:0,wall:0,multi:0,tarch:0,uatk:0,uhp:0},lordAim:0,waveBonus:0};S.spawnLeft=8+S.wave*4;S.eliteAt=Math.ceil(S.spawnLeft/2);}
 function spawnEnemy(){const w=S.wave,boss=S.spawnLeft==1&&w%5==0,r=Math.random();
- let e={x:W+20,y:TOP+Math.random()*(BOT-TOP),hp:26+w*12+w*w*.6,spd:40+Math.random()*18,dmg:6+w*1.5,range:20,rate:1,t:0,kind:'grunt',r:13,gold:4+(w>>1),pend:0,walk:Math.random()*9};
+ let e={x:W+20,y:TOP+Math.random()*(BOT-TOP),hp:26+w*12+w*w*.6,spd:40+Math.random()*18,dmg:6+w*1.5,range:20,rate:1,t:0,kind:'grunt',r:13,gold:Math.round((4+(w>>1))*1.3),pend:0,walk:Math.random()*9};
  if(r<.25&&w>2){e.hp*=.6;e.spd*=1.8;e.kind='runner';e.r=11;}
  else if(r<.4&&w>3){e.hp*=2.5;e.spd*=.6;e.kind='brute';e.r=18;e.gold*=2;}
  // elite mid-boss: one per wave (from wave 2), drops a bomb when killed
@@ -94,7 +94,7 @@ function update(dt){
  for(const u of S.units){u.t-=dt;u.walk+=dt*8;u.atk=Math.max(0,u.atk-dt*4);
   if(u.fixed){ // arrows leave from the archers on top of the tower (screen-space offset, so it is right in portrait too)
    const [tsx,tsy]=P(u.x,u.y),[ox,oy]=unP(tsx,tsy-50);let first=null;
-   if(u.t<=0)for(let k=0;k<S.tArch;k++){const tg=pickTarget(ox,oy,u.range)||first;if(!tg)break;first=first||tg;u.face=Math.sign(tg.x-u.x)||1;tg.pend+=u.dmg;const [ax,ay]=unP(tsx+(k-(S.tArch-1)/2)*9,tsy-50);S.shots.push({x:ax,y:ay,tg,dmg:u.dmg,spd:560,a:0});}
+   if(u.t<=0)for(let k=0;k<(u.arch||1);k++){const tg=pickTarget(ox,oy,u.range)||first;if(!tg)break;first=first||tg;u.face=Math.sign(tg.x-u.x)||1;tg.pend+=u.dmg;const [ax,ay]=unP(tsx+(k-((u.arch||1)-1)/2)*9,tsy-50);S.shots.push({x:ax,y:ay,tg,dmg:u.dmg,spd:560,a:0});}
    if(first)u.t=u.rate;continue;}
   if(u.hx==null){u.hx=u.ranged?CX+30+Math.random()*35:CX+70+Math.random()*50;u.hy=u.y;}
   const near=S.enemies.filter(e=>e.x<(u.ranged?u.x+u.range:ENGAGE));const[e,d]=nearest(near,u.x,u.y);
@@ -143,7 +143,7 @@ function drawCastle(){const x0=10,w=CX-20,top=TOP-90;
  g.fillStyle='#ffcc33';g.beginPath();g.moveTo(lx-11,ly-24);g.lineTo(lx-8,ly-34);g.lineTo(lx-3,ly-27);g.lineTo(lx,ly-36);g.lineTo(lx+3,ly-27);g.lineTo(lx+8,ly-34);g.lineTo(lx+11,ly-24);g.fill();
  g.save();g.translate(lx,ly);g.rotate(S.lordAim);g.strokeStyle='#6b3d1a';g.lineWidth=3;g.beginPath();g.arc(8,0,18,-1.2,1.2);g.stroke();
  g.strokeStyle='#eee';g.lineWidth=1;g.beginPath();g.moveTo(8+18*Math.cos(-1.2),18*Math.sin(-1.2));g.lineTo(8-6*(S.lordT/S.lordRate),0);g.lineTo(8+18*Math.cos(1.2),18*Math.sin(1.2));g.stroke();g.restore();
- const p=S.castle/S.castleMax;g.fillStyle='#0009';g.fillRect(x0,BOT+8,w,8);g.fillStyle=p>.5?'#5be36b':p>.25?'#ffc23a':'#ff4b4b';g.fillRect(x0,BOT+8,w*p,8);}
+ const p=S.castle/S.castleMax;g.fillStyle='#0009';g.fillRect(x0,BOT+4,w,14);g.fillStyle=p>.5?'#5be36b':p>.25?'#ffc23a':'#ff4b4b';g.fillRect(x0,BOT+4,w*p,14);g.fillStyle='#fff';g.font='bold 11px sans-serif';g.textAlign='center';g.fillText('🏰 '+Math.ceil(S.castle)+'/'+S.castleMax,x0+w/2,BOT+15);g.textAlign='left';}
 function drawTower(x,y,u,ghost){ // stone archer tower; y is its base
  if(!ghost)E(x,y+4,22,6,'#0005');
  const st=g.createLinearGradient(x-18,0,x+18,0);st.addColorStop(0,'#7d8291');st.addColorStop(1,'#b0b5c2');g.fillStyle=st;
@@ -151,7 +151,7 @@ function drawTower(x,y,u,ghost){ // stone archer tower; y is its base
  g.strokeStyle='#5f6472';g.lineWidth=1;for(let k=0;k<4;k++){g.beginPath();g.moveTo(x-17+k,y-k*11);g.lineTo(x+17-k,y-k*11);g.stroke();}
  g.fillStyle='#3a2a1a';g.fillRect(x-4,y-14,8,14);
  g.fillStyle='#9a9fad';for(let i=-1;i<=1;i++)g.fillRect(x+i*10-4,y-52,8,9);g.fillRect(x-17,y-46,34,5);
- const na=ghost?1:S.tArch;for(let k=0;k<na;k++){const ax=x+(k-(na-1)/2)*9;E(ax,y-50,4.5,4.5,'#ffd9b0');g.fillStyle='#2f7a3f';g.beginPath();g.moveTo(ax-5,y-52);g.lineTo(ax,y-59);g.lineTo(ax+5,y-52);g.fill();}
+ const na=ghost||!u?1:(u.arch||1);for(let k=0;k<na;k++){const ax=x+(k-(na-1)/2)*9;E(ax,y-50,4.5,4.5,'#ffd9b0');g.fillStyle='#2f7a3f';g.beginPath();g.moveTo(ax-5,y-52);g.lineTo(ax,y-59);g.lineTo(ax+5,y-52);g.fill();}
  if(u){const f=u.face||1;g.save();g.translate(x+f*7,y-49);g.scale(f,1);g.strokeStyle='#6b3d1a';g.lineWidth=2;g.beginPath();g.arc(0,0,8,-1.3,1.3);g.stroke();g.restore();
   g.fillStyle='#0008';g.fillRect(x-16,y-68,32,4);g.fillStyle='#5be36b';g.fillRect(x-16,y-68,32*u.hp/u.max,4);}}
 function drawUnit(u){if(u.fixed){drawTower(u.x,u.y,u);return;}const bob=Math.abs(Math.sin(u.walk))*2,x=u.x+(u.face||1)*(u.atk||0)*8,y=u.y-bob,f=u.face||1;
@@ -205,7 +205,7 @@ function drawCastleP(){const top=PH-10-CX*KY,base=PH;
  g.fillStyle='#8f94a2';for(let i=0;i<PW;i+=36)g.fillRect(i+4,top-14,22,16);
  [[30,1],[PW-30,-1]].forEach(([fx])=>{g.fillStyle='#555';g.fillRect(fx,top-58,3,46);g.fillStyle='#c0392b';g.beginPath();g.moveTo(fx+3,top-58);g.lineTo(fx+30,top-50);g.lineTo(fx+3,top-42);g.fill();});
  const [lx,ly]=P(...lordPos());drawLord(lx,ly);
- const p=S.castle/S.castleMax;g.fillStyle='#0009';g.fillRect(10,PH-14,PW-20,8);g.fillStyle=p>.5?'#5be36b':p>.25?'#ffc23a':'#ff4b4b';g.fillRect(10,PH-14,(PW-20)*p,8);}
+ const p=S.castle/S.castleMax;g.fillStyle='#0009';g.fillRect(10,PH-20,PW-110,14);g.fillStyle=p>.5?'#5be36b':p>.25?'#ffc23a':'#ff4b4b';g.fillRect(10,PH-20,(PW-110)*p,14);g.fillStyle='#fff';g.font='bold 11px sans-serif';g.textAlign='center';g.fillText('🏰 '+Math.ceil(S.castle)+'/'+S.castleMax,10+(PW-110)/2,PH-9);g.textAlign='left';}
 function drawLord(lx,ly){E(lx,ly+6,16,18,'#2b4fa8');E(lx,ly-16,11,11,'#ffd9b0');
  g.fillStyle='#ffcc33';g.beginPath();g.moveTo(lx-11,ly-24);g.lineTo(lx-8,ly-34);g.lineTo(lx-3,ly-27);g.lineTo(lx,ly-36);g.lineTo(lx+3,ly-27);g.lineTo(lx+8,ly-34);g.lineTo(lx+11,ly-24);g.fill();
  g.save();g.translate(lx,ly);g.rotate(angP(S.lordAim));g.strokeStyle='#6b3d1a';g.lineWidth=3;g.beginPath();g.arc(8,0,18,-1.2,1.2);g.stroke();
@@ -222,10 +222,10 @@ function draw(){
   else{g.font='bold 14px sans-serif';g.lineWidth=3;g.strokeStyle='#000';g.strokeText(f.txt,f.x,f.y-(.6-f.t)*30);g.fillStyle=f.col||'#fff';g.fillText(f.txt,f.x,f.y-(.6-f.t)*30);}}
  g.globalAlpha=1;g.restore();
  // HUD (two rows in portrait)
- const items=[`💰 ${S.gold}`,`🌊 웨이브 ${S.wave}`,`🏰 ${Math.ceil(S.castle)}/${S.castleMax}`,`☠ ${S.kills}`,`🏹 ${S.arrows}발`,'💣 '+'●'.repeat(S.bombs)+'○'.repeat(3-S.bombs)];
+ const items=[`💰 ${S.gold}`,`🌊 웨이브 ${S.wave}`,`☠ ${S.kills}`,`🏹 ${S.arrows}발`,'💣 '+'●'.repeat(S.bombs)+'○'.repeat(3-S.bombs)];
  g.fillStyle='#1a1208cc';g.fillRect(0,0,CW,PORT?56:36);g.fillStyle='#fbeed3';g.font=`bold ${PORT?15:17}px "Malgun Gothic"`;g.textAlign='left';
  if(PORT)items.forEach((t,i)=>g.fillText(t,12+(i%3)*155,22+Math.floor(i/3)*24));
- else[14,130,270,430,520,620].forEach((x,i)=>g.fillText(items[i],x,24));
+ else[14,140,290,400,520].forEach((x,i)=>g.fillText(items[i],x,24));
  g.textAlign='center';const cx=CW/2,cy=CH/2;
  if(S.spawnLeft==0&&!S.enemies.length&&!S.over){g.font='bold 32px "Malgun Gothic"';g.lineWidth=5;g.strokeStyle='#000';const t=`다음 웨이브 ${Math.ceil(S.waveT)}`;g.strokeText(t,cx,cy);g.fillStyle='#fff';g.fillText(t,cx,cy);}
  if(!S.over){drawTowerDrag();drawRepair();drawBombUI();}g.textAlign='center';
@@ -267,31 +267,36 @@ function upgrade(u){au();const l=S.lv[u.lv];if(l>=u.max)return;const c=u.cost(l)
 // ---------- bomb: drag from the bomb button, preview the blast, release to drop ----------
 // release on the button again or outside the screen cancels
 const BLAST=()=>PORT?100:90;
-function bombBtn(){return PORT?{x:CW-46,y:CH-170,r:32}:{x:CW-52,y:CH-52,r:34};}
+// the bomb button lives inside the castle wall so it never covers the field
+function bombBtn(){return PORT?{x:CW-44,y:CH-62,r:28}:{x:72,y:BOT-58,r:30};}
 let drag=null;
 function evPos(ev){const r=cv.getBoundingClientRect();return {x:(ev.clientX-r.left)*CW/r.width,y:(ev.clientY-r.top)*CH/r.height,out:ev.clientX<r.left||ev.clientX>r.right||ev.clientY<r.top||ev.clientY>r.bottom};}
 const overBtn=p=>{const b=bombBtn();return Math.hypot(p.x-b.x,p.y-b.y)<b.r+6;};
-// ---------- tower repair: tap a tower to see the repair price (proportional to missing HP) ----------
-let selTower=null,repairBtn=null;
+// ---------- tower menu: tap a tower to repair it or hire another archer for that tower (up to 4) ----------
+let selTower=null,tBtns=[];
 const repairCost=u=>Math.ceil((1-u.hp/u.max)*u.cost*0.9);
+const archCost=u=>[150,320,600][(u.arch||1)-1];
 function towerTap(p){
- if(selTower&&repairBtn&&p.x>=repairBtn.x&&p.x<=repairBtn.x+repairBtn.w&&p.y>=repairBtn.y&&p.y<=repairBtn.y+repairBtn.h){
-  const c=repairCost(selTower);if(selTower.hp>=selTower.max){selTower=null;return true;}
-  if(S.gold<c){S.fx.push({x:selTower.x,y:selTower.y-70,t:.8,txt:'골드 부족',col:'#ff8080'});return true;}
-  S.gold-=c;selTower.hp=selTower.max;SFX.pick();S.fx.push({x:selTower.x,y:selTower.y-70,t:.8,txt:'🔧 수리 완료',col:'#7fe3ab'});selTower=null;return true;}
+ const hitB=tBtns.find(b=>p.x>=b.x&&p.x<=b.x+b.w&&p.y>=b.y&&p.y<=b.y+b.h);
+ if(selTower&&hitB){const u=selTower,say=(t,c)=>S.fx.push({x:u.x,y:u.y-70,t:.8,txt:t,col:c});
+  if(hitB.k=='rep'){const c=repairCost(u);if(u.hp>=u.max)return true;if(S.gold<c){say('골드 부족','#ff8080');return true;}S.gold-=c;u.hp=u.max;SFX.pick();say('🔧 수리 완료','#7fe3ab');}
+  else{if((u.arch||1)>=4)return true;const c=archCost(u);if(S.gold<c){say('골드 부족','#ff8080');return true;}S.gold-=c;u.arch=(u.arch||1)+1;SFX.pick();say('🏹 궁수 '+u.arch+'명','#ffd27a');}
+  return true;}
  const t=S.units.filter(u=>u.fixed).find(u=>{const [sx,sy]=P(u.x,u.y);return Math.abs(p.x-sx)<24&&p.y<sy+10&&p.y>sy-66;});
  if(t){selTower=t===selTower?null:t;return true;}
  if(selTower){selTower=null;return true;}
  return false;}
-function drawRepair(){repairBtn=null;if(!selTower)return;if(!S.units.includes(selTower)){selTower=null;return;}
- const [x,y]=P(selTower.x,selTower.y),full=selTower.hp>=selTower.max,c=repairCost(selTower),ok=!full&&S.gold>=c;
+function drawRepair(){tBtns=[];if(!selTower)return;if(!S.units.includes(selTower)){selTower=null;return;}
+ const u=selTower,[x,y]=P(u.x,u.y),full=u.hp>=u.max,rc=repairCost(u),a=u.arch||1,ac=a<4?archCost(u):0;
  g.save();g.strokeStyle='#ffd27a';g.lineWidth=2;g.setLineDash([5,4]);g.beginPath();g.ellipse(x,y+3,26,8,0,0,7);g.stroke();g.setLineDash([]);
- const w=118,h=34,bx=Math.max(4,Math.min(CW-w-4,x-w/2)),by=Math.max(40,y-112);repairBtn={x:bx,y:by,w,h};
- g.fillStyle=full?'#3a3a3aee':ok?'#2f6b3aee':'#5a2a2aee';g.beginPath();g.roundRect?g.roundRect(bx,by,w,h,9):g.rect(bx,by,w,h);g.fill();g.strokeStyle='#ffd27a';g.lineWidth=2;g.stroke();
- g.fillStyle='#fff';g.font='bold 14px "Malgun Gothic"';g.textAlign='center';g.textBaseline='middle';
- g.fillText(full?'체력 가득':`🔧 수리 ${c}G`,bx+w/2,by+h/2+1);g.textBaseline='alphabetic';
- g.fillStyle='#0008';g.fillRect(bx,by+h+3,w,5);g.fillStyle='#5be36b';g.fillRect(bx,by+h+3,w*selTower.hp/selTower.max,5);
+ const w=112,h=32,gap=6,tw=w*2+gap,bx=Math.max(4,Math.min(CW-tw-4,x-tw/2)),by=Math.max(70,y-116);
+ const btn=(k,bx,txt,on)=>{g.fillStyle=on?'#2f6b3aee':'#3a3a3aee';g.beginPath();g.roundRect?g.roundRect(bx,by,w,h,9):g.rect(bx,by,w,h);g.fill();g.strokeStyle='#ffd27a';g.lineWidth=2;g.stroke();
+  g.fillStyle='#fff';g.font='bold 13px "Malgun Gothic"';g.textAlign='center';g.textBaseline='middle';g.fillText(txt,bx+w/2,by+h/2+1);tBtns.push({k,x:bx,y:by,w,h});};
+ btn('rep',bx,full?'체력 가득':`🔧 수리 ${rc}G`,!full&&S.gold>=rc);
+ btn('arch',bx+w+gap,a>=4?'🏹 궁수 4 MAX':`🏹 궁수+1 ${ac}G`,a<4&&S.gold>=ac);
+ g.textBaseline='alphabetic';g.fillStyle='#0008';g.fillRect(bx,by+h+4,tw,5);g.fillStyle='#5be36b';g.fillRect(bx,by+h+4,tw*u.hp/u.max,5);
  g.restore();}
+
 cv.addEventListener('pointerdown',ev=>{const wasStarted=S.started;au();
  if(S.over){reset(true);return;}if(!wasStarted||S.paused)return;
  const p=evPos(ev);

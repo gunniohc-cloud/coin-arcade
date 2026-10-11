@@ -288,6 +288,15 @@ let last=performance.now();
 let lastWH="";
 function tick(now){const wh=innerWidth+"x"+innerHeight+"/"+(window.visualViewport?visualViewport.width+"x"+visualViewport.height:"");if(wh!==lastWH){lastWH=wh;resize();} // catches rotation even when no resize event fires
 const dt=Math.min(0.05,(now-last)/1000);last=now;if(running&&document.getElementById("rot").hidden)update(dt);render();requestAnimationFrame(tick);}
+// aim assist: bullets converge on what is ahead in the squad's lane.
+// few targets -> focus fire on the nearest one; many -> spread over the closest few
+let aimList=[];
+function buildAim(){const lane=laneOf(S.px),c=[];
+ for(const e of S.enemies)if(!e.dead&&e.z<0&&e.z>-46&&laneOf(e.x)==lane)c.push({x:e.x,z:e.z});
+ for(const o of S.objs)if(!o.dead&&!o.done&&o.lane==lane&&o.z<0&&o.z>-46)c.push({x:o.type=='gate'?LX[lane]:o.x,z:o.type=='gate'?o.z:o.z+0.75});
+ if(S.boss&&S.boss.z>-46&&lane==1)c.push({x:0,z:S.boss.z+1});
+ c.sort((a,b)=>b.z-a.z);return c;}
+function pickAim(){const c=aimList;if(!c.length)return null;if(c.length<=3)return c[0];return c[Math.floor(Math.random()*Math.min(c.length,8))];}
 function update(dt){
  if(flashT>0){flashT-=dt;if(flashT<=0)document.getElementById('flash').style.opacity=0;}
  const mv=S.speed*dt*(S.boss?0.0:1);S.dist+=mv;
@@ -313,9 +322,9 @@ function update(dt){
  // shooting
  S.flashT=Math.max(0,(S.flashT||0)-dt);S.recoil=Math.max(0,(S.recoil||0)-dt*7);
  for(const p of S.parts){p.vy-=12*dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.z+=p.vz*dt+mv;p.t-=dt;}S.parts=S.parts.filter(p=>p.t>0&&p.y>0);
- S.fireT-=dt;if(S.fireT<=0&&S.count>0){S.fireT=S.rate;SFX.shoot();S.fired=[];S.flashT=0.07;S.recoil=1;const shots=Math.min(S.count,25),per=S.dmg*Math.max(1,S.count/25);
-  for(let i=0;i<shots;i++){const fi=Math.floor(Math.random()*Math.min(S.count,MAXS)),f=form[fi];S.fired.push(fi);if(S.bullets.length<MAXB)S.bullets.push({x:S.px+f[0],z:f[1]-0.3,d:per,life:1.3});}}
- for(const b of S.bullets){b.pz=b.z;b.z-=40*dt;b.life-=dt;if(b.life<=0)b.dead=1;}
+ S.fireT-=dt;if(S.fireT<=0&&S.count>0){S.fireT=S.rate;SFX.shoot();aimList=buildAim();S.fired=[];S.flashT=0.07;S.recoil=1;const shots=Math.min(S.count,25),per=S.dmg*Math.max(1,S.count/25);
+  for(let i=0;i<shots;i++){const fi=Math.floor(Math.random()*Math.min(S.count,MAXS)),f=form[fi];S.fired.push(fi);if(S.bullets.length<MAXB){const b={x:S.px+f[0],z:f[1]-0.3,d:per,life:1.3,vx:0};const t=pickAim();if(t){const tt=Math.max(0.05,(b.z-t.z)/40);b.vx=Math.max(-25,Math.min(25,(t.x-b.x)/tt));}S.bullets.push(b);}}}
+ for(const b of S.bullets){b.pz=b.z;b.z-=40*dt;b.x+=(b.vx||0)*dt;b.life-=dt;if(b.life<=0)b.dead=1;}
  // enemies
  const R=crowdR()+0.3;updateObjs(S.boss?S.speed*dt:mv,R,dt);
  for(const e of S.enemies){e.z+=mv+(e.mini?1.25:PUSH)*dt;

@@ -222,10 +222,10 @@ function draw(){
   else{g.font='bold 14px sans-serif';g.lineWidth=3;g.strokeStyle='#000';g.strokeText(f.txt,f.x,f.y-(.6-f.t)*30);g.fillStyle=f.col||'#fff';g.fillText(f.txt,f.x,f.y-(.6-f.t)*30);}}
  g.globalAlpha=1;g.restore();
  // HUD (two rows in portrait)
- const items=[`💰 ${S.gold}`,`🌊 웨이브 ${S.wave}`,`☠ ${S.kills}`,`🏹 ${S.arrows}발`,'💣 '+'●'.repeat(S.bombs)+'○'.repeat(3-S.bombs)];
+ const items=[`💰 ${S.gold}`,`🌊 웨이브 ${S.wave}`,`☠ ${S.kills}`,`🏹 ${S.arrows}발`];
  g.fillStyle='#1a1208cc';g.fillRect(0,0,CW,PORT?56:36);g.fillStyle='#fbeed3';g.font=`bold ${PORT?15:17}px "Malgun Gothic"`;g.textAlign='left';
  if(PORT)items.forEach((t,i)=>g.fillText(t,12+(i%3)*155,22+Math.floor(i/3)*24));
- else[14,140,290,400,520].forEach((x,i)=>g.fillText(items[i],x,24));
+ else[14,150,310,430].forEach((x,i)=>g.fillText(items[i],x,24));
  g.textAlign='center';const cx=CW/2,cy=CH/2;
  if(S.spawnLeft==0&&!S.enemies.length&&!S.over){g.font='bold 32px "Malgun Gothic"';g.lineWidth=5;g.strokeStyle='#000';const t=`다음 웨이브 ${Math.ceil(S.waveT)}`;g.strokeText(t,cx,cy);g.fillStyle='#fff';g.fillText(t,cx,cy);}
  if(!S.over){drawTowerDrag();drawRepair();drawBombUI();}g.textAlign='center';

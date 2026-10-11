@@ -160,7 +160,7 @@ let S,running=false;
 const cntEl=document.getElementById('cnt'),hud=document.getElementById('hud'),msg=document.getElementById('msg'),bb=document.getElementById('bossbar');
 function reset(){
  for(const g of (S?S.gates:[]))scene.remove(g.mesh);for(const o of (S?S.objs:[]))scene.remove(o.mesh);
- S={count:3,base:100,gatesN:0,px:0,tx:0,dist:0,speed:4.5,stage:1,dmg:1,rate:0.35,fireT:0,enemies:[],bullets:[],gates:[],objs:[],parts:[],fired:[],missiles:[],flames:[],w:{laser:0,flame:0,missile:0},wk:'gun',wl:1,nextGate:20,nextR:8,sd:0,nextRow:0,nextEnemy:40,nextMini:50,leak:0,
+ S={count:8,base:100,gatesN:0,px:0,tx:0,dist:0,speed:4.5,stage:1,dmg:1,rate:0.35,fireT:0,enemies:[],bullets:[],gates:[],objs:[],parts:[],fired:[],missiles:[],flames:[],w:{laser:0,flame:0,missile:0},wk:'gun',wl:1,nextGate:20,nextR:8,sd:0,nextRow:0,nextEnemy:40,nextMini:50,leak:0,
    boss:null,stageLen:220,stageStart:0};
  boss.visible=false;bb.style.display='none';
 }
@@ -301,8 +301,8 @@ function buildAim(){const lane=laneOf(S.px),c=[];
  if(S.boss&&S.boss.z>-46&&lane==1)c.push({x:0,z:S.boss.z+1});
  c.sort((a,b)=>b.z-a.z);return c;}
 // one row of the stream: a few grunts spread across lanes 1-2, toughness tied to the army's firepower and the gate level
-function spawnStreamRow(mul){const gl=gateLevel(),k=Math.max(1,Math.round((2+Math.floor(Math.random()*2)+Math.floor(gl/3))*mul)),
- hp=Math.max(1,firepower()*0.3/k)*(1+0.2*(gl-1))*(S.stage==1&&S.dist<60?0.6:1),lo=LX[0]-LW/2+0.5,hi=LX[1]+LW/2-0.5;
+function spawnStreamRow(mul){const gl=gateLevel(),k=Math.max(1,Math.min(6,Math.round((1+S.count/30+gl/3+(Math.random()<0.5?1:0))*mul))),
+ hp=Math.max(1,firepower()*0.22/k)*(1+0.2*(gl-1))*(S.stage==1&&S.dist<60?0.6:1),lo=LX[0]-LW/2+0.5,hi=LX[1]+LW/2-0.5;
  for(let i=0;i<k&&S.enemies.length<MAXE;i++)S.enemies.push({x:lo+Math.random()*(hi-lo),z:SPAWN_Z-Math.random()*1.5,hp,max:hp});}function gateLevel(){return 1+Math.floor(S.gatesN/4)+(S.stage-1);}
 function pickAim(){const c=aimList;if(!c.length)return null;if(c.length<=3)return c[0];return c[Math.floor(Math.random()*Math.min(c.length,8))];}
 // ---------- flashy effects: shockwave rings, explosion light, glowing sparks, screen flash ----------
@@ -388,7 +388,7 @@ function update(dt){
   if(S.dist>S.nextR){makeGate(2,SPAWN_Z,gateLevel());S.nextR=S.dist+6;} // endless conveyor of reinforcement gates
   if(S.dist>S.nextMini){spawnMini();S.nextMini=S.dist+55+Math.random()*15;}}
  // the endless enemy stream fills lanes 1 and 2 (it keeps coming during the boss too)
- S.sd=(S.sd||0)+(S.boss?S.speed*dt:mv);if(S.sd>S.nextRow){spawnStreamRow(S.boss?0.5:1);S.nextRow=S.sd+1.6;}
+ S.sd=(S.sd||0)+(S.boss?S.speed*dt:mv);if(S.sd>S.nextRow){spawnStreamRow(S.boss?0.5:1);S.nextRow=S.sd+2.2;}
  S.base=Math.min(100,S.base+1.5*dt);
  if(!S.boss&&inStage>=S.stageLen+8){S.boss={z:-36,hp:(()=>{const v=Math.max(1,Math.min(S.count,25));return (80+S.stage*60+v*S.dmg*Math.max(1,S.count/25)/S.rate*9)*(1+0.3*(gateLevel()-1));})(),max:0,t:0};S.boss.max=S.boss.hp;boss.visible=true;bb.style.display='block';SFX.boss();
   S.gates.forEach(g=>scene.remove(g.mesh));S.gates=[];S.objs.forEach(removeObj);S.objs=[];S.bd=0;S.nextBR=0;S.nextBS=12;}

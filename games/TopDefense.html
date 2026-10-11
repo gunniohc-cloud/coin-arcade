@@ -37,7 +37,7 @@ body.port #ui button i{font-size:14px}body.port #ui button b{font-size:10px}
 </style></head><body>
 <div id="stage"><canvas id="c" width="1000" height="480"></canvas></div>
 <div id="ui"></div>
-<div id="info">1~3 소환 · Q W E R T Y 업그레이드 · 필드 클릭: 폭탄 투하 (💣는 웨이브 클리어·정예/보스 처치로 획득) · P 일시정지</div>
+<div id="info">1~3 소환 · Q W E R T Y 업그레이드 · 폭탄 버튼을 드래그해서 투하 (💣는 웨이브마다 1개) · P 일시정지</div>
 <script>
 const cv=document.getElementById('c'),g=cv.getContext('2d');
 const W=cv.width,H=cv.height,TOP=170,BOT=450,CX=150;
@@ -78,7 +78,7 @@ const UPS=[
  {key:'t',ic:'🗡️',sh:'병사공격',name:'병사 공격력',lv:'uatk',max:99,cost:l=>70+l*55,apply:()=>{S.uAtk+=.2;S.units.forEach(u=>u.dmg=u.base.dmg*S.uAtk)}},
  {key:'y',ic:'❤️',sh:'병사체력',name:'병사 체력',lv:'uhp',max:99,cost:l=>70+l*55,apply:()=>{S.uHp+=.25;S.units.forEach(u=>{const r=u.hp/u.max;u.max=u.base.hp*S.uHp;u.hp=u.max*r;})}}];
 function reset(go){S={started:!!go,gold:90,wave:1,castle:300,castleMax:300,lordDmg:10,lordRate:1,lordT:0,arrows:1,tArch:1,uAtk:1,uHp:1,income:2,incT:0,
- units:[],enemies:[],shots:[],fx:[],items:[],bombs:1,spawnLeft:0,spawnT:0,waveT:8,over:false,paused:false,kills:0,shake:0,t:0,
+ units:[],enemies:[],shots:[],fx:[],items:[],bombs:1,spawnLeft:0,spawnT:0,waveT:1,over:false,paused:false,kills:0,shake:0,t:0,
  lv:{dmg:0,rate:0,wall:0,multi:0,tarch:0,uatk:0,uhp:0},lordAim:0,waveBonus:0};S.spawnLeft=8+S.wave*4;S.eliteAt=Math.ceil(S.spawnLeft/2);}
 function spawnEnemy(){const w=S.wave,boss=S.spawnLeft==1&&w%5==0,r=Math.random();
  let e={x:W+20,y:TOP+Math.random()*(BOT-TOP),hp:26+w*12+w*w*.6,spd:40+Math.random()*18,dmg:6+w*1.5,range:20,rate:1,t:0,kind:'grunt',r:13,gold:Math.round((4+(w>>1))*1.3),pend:0,walk:Math.random()*9};
@@ -94,7 +94,7 @@ function pickTarget(x,y,range){let b=null,d=1e9;for(const e of S.enemies){if(e.h
 function nearest(arr,x,y){let b=null,d=1e9;for(const o of arr){const dd=Math.hypot(o.x-x,o.y-y);if(dd<d){d=dd;b=o}}return [b,d];}
 function hit(e,dmg){e.hp-=dmg;SFX.hit();e.hitT=.12;for(let i=0;i<3;i++)S.fx.push({x:e.x,y:e.y,vx:(Math.random()-.5)*140,vy:-40-Math.random()*90,t:.25,part:"#fff3a0"});S.fx.push({x:e.x+(Math.random()-.5)*10,y:e.y-e.r-6,t:.6,txt:Math.round(dmg)});if(e.hp<=0&&!e.dead)kill(e);}
 function kill(e){e.dead=1;SFX.kill();S.gold+=e.gold;S.kills++;for(let i=0;i<8;i++)S.fx.push({x:e.x,y:e.y,vx:(Math.random()-.5)*160,vy:-Math.random()*160,t:.5,part:e.kind=='boss'?'#3a0d0d':'#7fbf4a'});
- if(e.kind=='elite'||e.kind=='boss')gainBomb(e.x,e.y-e.r,e.kind=='boss'?'보스 처치! 💣 +1':'정예 처치! 💣 +1');}
+}
 function gainBomb(x,y,txt){const full=S.bombs>=3;if(!full){S.bombs++;SFX.pick();}S.fx.push({x,y,t:1.2,txt:full?'💣 가득 참':txt,col:'#ffd27a'});}
 function fireLord(){const [sx,sy]=lordPos();const t=pickTarget(sx,sy,900);if(!t)return false;
  const a=Math.atan2(t.y-sy,t.x-sx);S.lordAim=a;t.pend+=S.lordDmg;
@@ -106,7 +106,7 @@ function update(dt){
  S.incT+=dt;if(S.incT>=1){S.incT=0;S.gold+=S.income;}
  if(S.spawnLeft>0){S.spawnT-=dt;if(S.spawnT<=0){spawnEnemy();S.spawnLeft--;S.spawnT=Math.max(.25,1.1-S.wave*.06);}}
  else if(!S.enemies.length){if(!S.waveBonus){S.waveBonus=1;const [bx,by]=PORT?unP(PW/2,PH/2-60):[W/2,TOP+60];gainBomb(bx,by,'웨이브 클리어! 💣 +1');}
-  S.waveT-=dt;if(S.waveT<=0){S.waveBonus=0;S.wave++;SFX.horn();{const bonus=40+S.wave*12;S.gold+=bonus;const [bx,by]=PORT?unP(PW/2,PH/2-20):[W/2,TOP+100];S.fx.push({x:bx,y:by,t:1.4,txt:'💰 웨이브 보너스 +'+bonus+'G',col:'#ffd27a'});}S.waveT=8;S.spawnLeft=8+S.wave*4;S.eliteAt=Math.ceil(S.spawnLeft/2);}}
+  S.waveT-=dt;if(S.waveT<=0){S.waveBonus=0;S.wave++;SFX.horn();{const bonus=40+S.wave*12;S.gold+=bonus;const [bx,by]=PORT?unP(PW/2,PH/2-20):[W/2,TOP+100];S.fx.push({x:bx,y:by,t:1.4,txt:'💰 웨이브 보너스 +'+bonus+'G',col:'#ffd27a'});}S.waveT=1;S.spawnLeft=8+S.wave*4;S.eliteAt=Math.ceil(S.spawnLeft/2);}}
  S.lordT-=dt;if(S.lordT<=0&&fireLord())S.lordT=S.lordRate;
  // defensive AI: archers hold a line near the wall; melee only sally out to meet enemies inside the guard zone, then hurry home
  const ARCH_LINE=CX+70,MELEE_LINE=CX+230,ENGAGE=CX+260;
@@ -369,4 +369,5 @@ let menuPaused=false;addEventListener("message",e=>{const d=e.data;if(!d||d.type
 reset();setMode();fit();addEventListener("resize",()=>{setMode();fit();});requestAnimationFrame(loop);
 </script><style>/* no long-press text selection, callout menu or tap flash */*{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}input,textarea{-webkit-user-select:text;user-select:text}</style>
 <script>addEventListener('contextmenu',e=>{if(!e.target.closest||!e.target.closest('input,textarea'))e.preventDefault();});addEventListener('selectstart',e=>{if(!e.target.closest||!e.target.closest('input,textarea'))e.preventDefault();});</script>
+<script>/* iOS suspends audio when the screen locks: resume it when we come back and on the next touch */(function(){const wake=()=>{try{if(typeof AC!=='undefined'&&AC&&AC.state!=='running')AC.resume();}catch(e){}};document.addEventListener('visibilitychange',()=>{if(!document.hidden)wake();});['pointerdown','touchend','keydown'].forEach(ev=>addEventListener(ev,wake,true));addEventListener('message',e=>{if(e.data&&e.data.type==='arcade-cmd'&&e.data.cmd==='resume')wake();});})();</script>
 </body></html>

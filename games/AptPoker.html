@@ -274,4 +274,5 @@ addEventListener('keydown',e=>{if(document.getElementById('rule').hidden)return;
 </script>
 <style>/* no long-press text selection, callout menu or tap flash */*{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}input,textarea{-webkit-user-select:text;user-select:text}</style>
 <script>addEventListener('contextmenu',e=>{if(!e.target.closest||!e.target.closest('input,textarea'))e.preventDefault();});addEventListener('selectstart',e=>{if(!e.target.closest||!e.target.closest('input,textarea'))e.preventDefault();});</script>
+<script>/* iOS suspends audio when the screen locks: resume it when we come back and on the next touch */(function(){const wake=()=>{try{if(typeof AC!=='undefined'&&AC&&AC.state!=='running')AC.resume();}catch(e){}};document.addEventListener('visibilitychange',()=>{if(!document.hidden)wake();});['pointerdown','touchend','keydown'].forEach(ev=>addEventListener(ev,wake,true));addEventListener('message',e=>{if(e.data&&e.data.type==='arcade-cmd'&&e.data.cmd==='resume')wake();});})();</script>
 </body></html>

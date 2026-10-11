@@ -55,7 +55,7 @@ addEventListener('keydown',e=>{if(e.key.toLowerCase()=='m'){muted=!muted;}});
 
 const VIS=60; // past this many soldiers the army stops growing on screen - the number tells the rest
 const ROAD=8.2, MAXS=400, MAXE=300, MAXB=1200;
-const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(devicePixelRatio);renderer.shadowMap.enabled=true;
+const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(1.5,devicePixelRatio||1)); /* phones are 3x: 1.5x looks the same and costs far less */renderer.shadowMap.enabled=true;
 document.body.appendChild(renderer.domElement);
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x87b8e8);scene.fog=new THREE.Fog(0xcfe4f2,45,115);
 const cam=new THREE.PerspectiveCamera(56,1,0.1,200);
@@ -72,14 +72,14 @@ function resize(){const vw=Math.round((window.visualViewport||window).width||inn
  const pad=document.getElementById('pad');pad.style.top=PORT?(viewTop+h+12)+'px':'';}
 addEventListener('resize',resize);resize();
 if(window.visualViewport)visualViewport.addEventListener("resize",resize);
-renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.shadowMap.type=THREE.PCFShadowMap;
 { // gradient sky dome
  const c=document.createElement('canvas');c.width=2;c.height=256;const x=c.getContext('2d');const gr=x.createLinearGradient(0,0,0,256);
  gr.addColorStop(0,'#3d7fd6');gr.addColorStop(.6,'#9fd0f5');gr.addColorStop(1,'#fdf1d8');x.fillStyle=gr;x.fillRect(0,0,2,256);
  const t=new THREE.CanvasTexture(c);scene.background=t;}
 scene.add(new THREE.HemisphereLight(0xdff0ff,0x4a6b3a,0.75));
 const sun=new THREE.DirectionalLight(0xfff1d6,1.15);sun.position.set(6,18,10);sun.castShadow=true;
-sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-14,right:14,top:14,bottom:-30,far:60});scene.add(sun);
+sun.shadow.mapSize.set(1024,1024);Object.assign(sun.shadow.camera,{left:-14,right:14,top:14,bottom:-30,far:60});scene.add(sun);
 function texCanvas(w,h,fn){const c=document.createElement('canvas');c.width=w;c.height=h;fn(c.getContext('2d'),w,h);const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=8;return t;}
 // asphalt with grain + edge lines
 const roadTex=texCanvas(256,256,(x,w,h)=>{x.fillStyle='#6f7079';x.fillRect(0,0,w,h);for(let i=0;i<3000;i++){x.fillStyle=Math.random()<.5?'#62636b':'#80818a';x.fillRect(Math.random()*w,Math.random()*h,2,2);}
@@ -519,4 +519,5 @@ let menuPaused=false;addEventListener("message",e=>{const d=e.data;if(!d||d.type
 reset();requestAnimationFrame(tick);
 </script><style>/* no long-press text selection, callout menu or tap flash */*{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}input,textarea{-webkit-user-select:text;user-select:text}</style>
 <script>addEventListener('contextmenu',e=>{if(!e.target.closest||!e.target.closest('input,textarea'))e.preventDefault();});addEventListener('selectstart',e=>{if(!e.target.closest||!e.target.closest('input,textarea'))e.preventDefault();});</script>
+<script>/* iOS suspends audio when the screen locks: resume it when we come back and on the next touch */(function(){const wake=()=>{try{if(typeof AC!=='undefined'&&AC&&AC.state!=='running')AC.resume();}catch(e){}};document.addEventListener('visibilitychange',()=>{if(!document.hidden)wake();});['pointerdown','touchend','keydown'].forEach(ev=>addEventListener(ev,wake,true));addEventListener('message',e=>{if(e.data&&e.data.type==='arcade-cmd'&&e.data.cmd==='resume')wake();});})();</script>
 </body></html>

@@ -342,7 +342,7 @@ const flameMesh=new THREE.Mesh(new THREE.ConeGeometry(2.4,9,18,1,true),new THREE
 flameMesh.rotation.x=-Math.PI/2;flameMesh.visible=false;
 const fireBands=[0xfff070,0xffa020,0xe8401a].map(c=>{const m=inst(new THREE.IcosahedronGeometry(0.32,0),c,260);m.castShadow=false;m.material=new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:.9,depthWrite:false});return m;});
 const flameIn=new THREE.Mesh(new THREE.ConeGeometry(1.2,6,14,1,true),new THREE.MeshBasicMaterial({color:0xffe060,transparent:true,opacity:.55,blending:THREE.AdditiveBlending,side:2,depthWrite:false}));flameIn.position.y=-1.5;flameMesh.add(flameIn);
-const missileM=inst(new THREE.CylinderGeometry(0.09,0.12,0.6,8),0xd03a2a,80);
+const missileM=inst(new THREE.CylinderGeometry(0.08,0.11,0.5,8),0xd03a2a,80);
 function perB(){return S.dmg*Math.max(1,S.count/25);}
 function laserBeams(){return S.count>=120?3:S.count>=45?2:1;}
 function laserThick(){return Math.min(2.2,1+Math.min(S.count,VIS*3)/90);}
@@ -372,17 +372,21 @@ function weaponsUpdate(dt,R){if(!S.w)S.w={laser:0,flame:0,missile:0};const W=S.w
  for(const o of S.objs)if(o.burn>0&&!o.dead){o.burn-=dt;hurtObj(o,o.burnDps*dt,0);}
  if(S.boss&&S.boss.burn>0){S.boss.burn-=dt;S.boss.hp-=S.boss.burnDps*dt*3;}
  for(const f of S.flames){f.t+=dt;f.x+=f.vx*dt;f.y+=f.vy*dt;f.z+=f.vz*dt;}S.flames=S.flames.filter(f=>f.t<f.life); // homing missiles: pick the nearest threat anywhere on the road and splash it
- if(W.missile){S.mslT=(S.mslT||0)-dt;if(S.mslT<=0){S.mslT=Math.max(0.35,1.3-W.missile*0.15);
-   for(let k=0;k<Math.min(5,W.missile);k++)S.missiles.push({x:px+(k-(W.missile-1)/2)*0.5,y:1.2,z:-0.5,vx:(Math.random()-.5)*6,vy:4,vz:-14,t:4});}}
- const targets=()=>{const c=S.enemies.filter(e=>!e.dead&&e.z<0).map(e=>({x:e.x,z:e.z,e}));for(const o of S.objs)if(!o.dead&&o.type=='barrel'&&o.z<0)c.push({x:o.x,z:o.z+0.75,o});if(S.boss)c.push({x:0,z:S.boss.z+1,boss:1});return c;};
+ // homing missiles: salvo size grows with the army; they chase the nearest threat, a barrel in the way stops them,
+ // and every hit explodes with splash damage around it
+ if(W.missile){S.mslT=(S.mslT||0)-dt;if(S.mslT<=0){const iv=Math.max(0.3,1.1-W.missile*0.15),n=Math.min(14,1+Math.floor(S.count/12)+(W.missile-1));S.mslT=iv;
+   const dmg=base*iv*0.6/n;for(let k=0;k<n&&S.missiles.length<80;k++)S.missiles.push({x:px+(k-(n-1)/2)*0.35,y:1.2,z:-0.5,vx:(Math.random()-.5)*8,vy:4+Math.random()*2,vz:-14,t:4,dmg});}}
+ const targets=()=>{const c=S.enemies.filter(e=>!e.dead&&e.z<0).map(e=>({x:e.x,z:e.z,e}));if(S.boss)c.push({x:0,z:S.boss.z+1,boss:1});return c;};
+ const explode=(x,z,dmg)=>{const R=2.2;for(const e of S.enemies){const d=Math.hypot(e.x-x,e.z-z);if(d<R)hurtEnemy(e,dmg*(d<0.8?1:0.45));}
+  for(const o of S.objs)if(o.type=='barrel'&&!o.dead&&Math.abs(o.x-x)<LW/2&&Math.abs(o.z+0.75-z)<R)hurtObj(o,dmg,0);
+  if(S.boss&&Math.abs(x)<2.2&&Math.abs(S.boss.z+1-z)<R+0.5)S.boss.hp-=dmg*3;burst(x,z,8,1);ring(x,z,2.2,0xffd0a0);};
  let tl=null;
- for(const m of S.missiles){m.t-=dt;if(!m.tg||(m.tg.e&&m.tg.e.dead)||(m.tg.o&&m.tg.o.dead)){tl=tl||targets();let best=null,bd=1e9;for(const c of tl){const d=Math.hypot(c.x-m.x,c.z-m.z);if(d<bd){bd=d;best=c;}}m.tg=best;}
-  const t=m.tg;if(t){const tx=t.e?t.e.x:t.o?t.o.x:t.x,tz=t.e?t.e.z:t.o?t.o.z+0.75:S.boss?S.boss.z+1:t.z,dx=tx-m.x,dz=tz-m.z,d=Math.hypot(dx,dz)||1;
-   m.vx+=(dx/d*28-m.vx)*Math.min(1,dt*6);m.vz+=(dz/d*28-m.vz)*Math.min(1,dt*6);
-   if(d<0.8){const dmg=base*Math.max(0.35,1.3-W.missile*0.15)*0.5/Math.min(5,W.missile);for(const e of S.enemies)if(Math.hypot(e.x-tx,e.z-tz)<1.6)hurtEnemy(e,dmg);
-    for(const o of S.objs)if(o.type=='barrel'&&Math.abs(o.x-tx)<LW/2&&Math.abs(o.z+0.75-tz)<1.6)hurtObj(o,dmg,0);if(t.boss&&S.boss)S.boss.hp-=dmg*3;
-    burst(tx,tz,12,1);ring(tx,tz,2.2,0xffd0a0);m.t=0;}}
-  m.vy-=6*dt;m.x+=m.vx*dt;m.z+=m.vz*dt;m.y=Math.max(0.6,m.y+m.vy*dt);if(Math.random()<.5&&S.parts.length<480)S.parts.push({x:m.x,y:m.y,z:m.z+0.3,vx:0,vy:0.5,vz:1,t:.2});}
+ for(const m of S.missiles){m.t-=dt;if(!m.tg||(m.tg.e&&m.tg.e.dead)){tl=tl||targets();let best=null,bd=1e9;for(const c of tl){const d=Math.hypot(c.x-m.x,c.z-m.z)+Math.random()*3;if(d<bd){bd=d;best=c;}}m.tg=best;}
+  const t=m.tg;if(t){const tx=t.e?t.e.x:t.x,tz=t.e?t.e.z:S.boss?S.boss.z+1:t.z,dx=tx-m.x,dz=tz-m.z,d=Math.hypot(dx,dz)||1;
+   m.vx+=(dx/d*28-m.vx)*Math.min(1,dt*6);m.vz+=(dz/d*28-m.vz)*Math.min(1,dt*6);if(d<0.8){explode(tx,tz,m.dmg);m.t=0;}}
+  const pz=m.z;m.vy-=6*dt;m.x+=m.vx*dt;m.z+=m.vz*dt;m.y=Math.max(0.6,m.y+m.vy*dt);
+  if(m.t>0)for(const o of S.objs)if(o.type=='barrel'&&!o.dead&&o.lane==laneOf(m.x)&&pz>=o.z+0.75&&m.z<o.z+0.75){explode(m.x,o.z+0.75,m.dmg);m.t=0;break;} // blocked by a barrel
+  if(Math.random()<.4&&S.parts.length<480)S.parts.push({x:m.x,y:m.y,z:m.z+0.3,vx:0,vy:0.5,vz:1,t:.2});}
  S.missiles=S.missiles.filter(m=>m.t>0);}
 function weaponsRender(){const W=S.w||{},t=performance.now()/1000;
  {const nb=W.laser?laserBeams():0,len=Math.max(1,-(S.laserBlock||-44)),thick=(1+W.laser*0.25)*laserThick();laserSet.forEach((m,i)=>{m.visible=i<nb;if(i<nb){m.position.set(S.px+(i-(nb-1)/2)*1.3,0.7,-len/2);const s=thick+Math.sin(t*40+i)*0.15;m.scale.set(s,s,len/44);m.material.opacity=.6+Math.sin(t*25+i)*.2;}});}

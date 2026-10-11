@@ -9,7 +9,8 @@ html,body{margin:0;height:100%;overflow:hidden;touch-action:none;-webkit-user-se
 #flash{position:fixed;top:30%;left:0;right:0;text-align:center;color:#ffe14a;font-size:34px;font-weight:900;text-shadow:0 3px 0 #a3261b,0 0 18px #000;pointer-events:none;opacity:0;transition:opacity .3s}
 #rot{position:fixed;inset:0;background:#14101f;color:#fff;font-weight:bold;font-size:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;line-height:1.6;z-index:50}
 #rot div{font-size:64px;animation:spin 1.6s ease-in-out infinite}@keyframes spin{0%,30%{transform:rotate(0)}60%,100%{transform:rotate(-90deg)}}
-canvas{touch-action:none;display:block}
+canvas{touch-action:none;display:block;z-index:0}
+#hud,#cnt,#flash,#bossbar{z-index:7}
 #pad{position:fixed;left:0;right:0;display:none;flex-wrap:wrap;gap:8px;justify-content:center;padding:0 12px;z-index:6}
 body.port #pad{display:flex}
 #pad button,#fsCorner{font:bold 24px "Malgun Gothic",sans-serif;background:#1a1208cc;color:#ffc93c;border:2px solid #ffc93c88;border-radius:14px;padding:14px 0;flex:1 1 26%;touch-action:manipulation}
@@ -365,7 +366,7 @@ function render(){
   const k=S.bullets.length;for(let i=0;i<k;i++){const b=S.bullets[i];dummy.position.set(b.x,0.6,b.z);dummy.rotation.set(Math.PI/2,0,0);dummy.updateMatrix();bulletM.setMatrixAt(i,dummy.matrix);}dummy.rotation.set(0,0,0);
   bulletM.count=k;bulletM.instanceMatrix.needsUpdate=true;
 
-  const p=new THREE.Vector3(S.px,1.6+crowdR()*0.3,0).project(cam);
+  const p=new THREE.Vector3(S.px,1.9,-crowdR()*0.45).project(cam);
   cntEl.style.left=(p.x+1)/2*innerWidth+'px';cntEl.style.top=(viewTop+(1-p.y)/2*viewH)+'px';cntEl.textContent=S.count;if(PORT&&!hud._fit){hud._fit=1;resize();}S.pulse=Math.max(0,(S.pulse||0)-0.08);cntEl.style.transform=`translate(-50%,-100%) scale(${1+S.pulse*0.35})`;cntEl.style.background=S.pulse>0.3?"#3fdc7a":"#2f7cf6";
   const prog=S.boss?'BOSS!':Math.min(100,Math.floor((S.dist-S.stageStart)/(S.stageLen+60)*100))+'%';
   hud.textContent=`🏠 기지 ${S.base}  ·  스테이지 ${S.stage}  ·  진행 ${prog}  ·  공격력 ${S.dmg.toFixed(1)}  ·  공속 ${(1/S.rate).toFixed(1)}/s`;}

@@ -105,13 +105,13 @@ function paintBarrel(o){const {c,x,t}=o.L;x.clearRect(0,0,c.width,c.height);
 let S=null,running=false;const hud=document.getElementById('hud'),msg=document.getElementById('msg'),bb=document.getElementById('basebar');
 const REWARDS=[{k:'rate',txt:'⚡ 연사+',col:'#e09b18'},{k:'multi',txt:'💥 2연발',col:'#7a3fd0'},{k:'tough',txt:'🛡 병사 강화',col:'#2a9df4'}];
 function clearScene(){if(!S)return;S.gates.forEach(g=>scene.remove(g.mesh));S.barrels.forEach(b=>scene.remove(b.mesh));}
-function reset(){clearScene();S={x:0,tx:0,hp:20,hpMax:20,stage:1,rate:0.3,multi:1,tough:1,fireT:0,recoil:0,balls:[],sold:[],enem:[],gates:[],barrels:[],parts:[],puffs:[],
+function reset(){clearScene();S={x:0,tx:0,hp:20,hpMax:20,stage:1,rate:0.42,multi:1,tough:1,fireT:0,recoil:0,balls:[],sold:[],enem:[],gates:[],barrels:[],parts:[],puffs:[],
  spawnT:2,baseHp:0,baseMax:0,dealt:0,barrelT:8,flashT:0,t:0};setupStage();}
 function setupStage(){const st=S.stage;clearScene();S.gates=[];S.barrels=[];S.enem=[];S.sold=[];S.balls=[];
- S.baseMax=S.baseHp=120+st*110+st*st*25;
+ S.baseMax=S.baseHp=200+st*220+st*st*40;
  // two rows of sliding gates; later stages get tougher red gates
  const row=(z,n,sp)=>{const w=(ROAD*2)/n;for(let i=0;i<n;i++){const r=Math.random();let o;
-   if(r<0.38)o={t:'x',v:Math.random()<0.25?3:2};else if(r<0.75)o={t:'+',v:3+Math.floor(Math.random()*(4+st*2))};else o={t:'-',v:2+Math.floor(Math.random()*(3+st*2))};
+   if(r<0.28)o={t:'x',v:st>=3&&Math.random()<0.15?3:2};else if(r<0.62)o={t:'+',v:1+Math.floor(Math.random()*3)};else o={t:'-',v:3+Math.floor(Math.random()*(3+st*2))};
    o.w=w*0.86;o.x=-ROAD+w*(i+.5);o.z=z;o.vx=sp*(Math.random()<.5?-1:1);o.L=label(256,150);
    o.mesh=new THREE.Mesh(new THREE.PlaneGeometry(o.w,2.1),new THREE.MeshBasicMaterial({map:o.L.t,transparent:true,side:2,depthWrite:false}));o.mesh.position.set(o.x,1.2,z);
    const posts=new THREE.Group();[-1,1].forEach(d=>{const p=new THREE.Mesh(new THREE.BoxGeometry(0.12,2.4,0.12),new THREE.MeshStandardMaterial({color:0xffffff}));p.position.set(d*o.w/2,0,0);posts.add(p);});o.mesh.add(posts);
@@ -164,9 +164,9 @@ function update(dt){S.t+=dt;
  S.balls=nb;S.barrels=S.barrels.filter(b=>!b.dead);
  for(const br of S.barrels){paintBarrelMaybe(br);}
  // enemies stream out of the base in waves
- S.spawnT-=dt;if(S.spawnT<=0){const st=S.stage,n=3+Math.floor(st*1.5+Math.random()*(2+st));S.spawnT=Math.max(1.6,4.2-st*0.25);
-  for(let i=0;i<n&&S.enem.length<MAXE;i++)S.enem.push({x:(Math.random()*2-1)*(ROAD-0.6),z:FIELD+1+Math.random()*2,hp:1+Math.floor(st/3),ph:Math.random()*6,atk:0,big:0});
-  if(st>=2&&Math.random()<0.25&&S.enem.length<MAXE)S.enem.push({x:(Math.random()*2-1)*(ROAD-1.5),z:FIELD+1,hp:15+st*10,max:15+st*10,ph:0,atk:0,big:1});}
+ S.spawnT-=dt;if(S.spawnT<=0){const st=S.stage,n=5+st*5+Math.floor(Math.random()*(3+st*2));S.spawnT=Math.max(1.4,3.2-st*0.22);
+  for(let i=0;i<n&&S.enem.length<MAXE;i++)S.enem.push({x:(Math.random()*2-1)*(ROAD-0.6),z:FIELD+1+Math.random()*2,hp:1+Math.floor((st-1)/2),ph:Math.random()*6,atk:0,big:0});
+  if(st>=2&&Math.random()<0.35&&S.enem.length<MAXE)S.enem.push({x:(Math.random()*2-1)*(ROAD-1.5),z:FIELD+1,hp:25+st*20,max:25+st*20,ph:0,atk:0,big:1});}
  // soldiers march toward the base, enemies march toward the player; they fight on contact
  const SV=3.4,EV=2.2+S.stage*0.12;
  for(const s of S.sold){s.ph+=dt*10;s.atk=Math.max(0,s.atk-dt*5);let tgt=null,bd=1.6;

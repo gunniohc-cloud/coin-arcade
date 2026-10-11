@@ -43,7 +43,7 @@ const W=cv.width,H=cv.height,TOP=170,BOT=450,CX=150;
 let S;
 // ---------- sound ----------
 let AC=null;function au(){if(S&&!S.started&&!S.over)S.started=true;if(!AC)AC=new (window.AudioContext||window.webkitAudioContext)();AC.resume();}
-function tone(f,d,t='square',v=.08,sl=0){if(!AC)return;const n=AC.currentTime,o=AC.createOscillator(),q=AC.createGain();o.type=t;o.frequency.setValueAtTime(f,n);if(sl)o.frequency.exponentialRampToValueAtTime(Math.max(40,f+sl),n+d);q.gain.setValueAtTime(v,n);q.gain.exponentialRampToValueAtTime(.001,n+d);o.connect(q);q.connect(AC.destination);o.start(n);o.stop(n+d);}
+let muted=false;function tone(f,d,t='square',v=.08,sl=0){if(!AC||muted)return;const n=AC.currentTime,o=AC.createOscillator(),q=AC.createGain();o.type=t;o.frequency.setValueAtTime(f,n);if(sl)o.frequency.exponentialRampToValueAtTime(Math.max(40,f+sl),n+d);q.gain.setValueAtTime(v,n);q.gain.exponentialRampToValueAtTime(.001,n+d);o.connect(q);q.connect(AC.destination);o.start(n);o.stop(n+d);}
 let lastBow=0;const SFX={bow(){const n=performance.now();if(n-lastBow<70)return;lastBow=n;tone(500,.06,'triangle',.05,-300)},boom(){tone(80,.5,'sawtooth',.25,-40)},coin(){tone(1300,.06,'triangle',.08)},pick(){tone(700,.1,'square',.08,500)}};
 // ---------- data ----------
 const UNITS=[
@@ -308,5 +308,10 @@ addEventListener('keydown',e=>{au();const k=e.key.toLowerCase();const u=UNITS.fi
 let last=performance.now();
 function loop(n){const dt=Math.min(.05,(n-last)/1000);last=n;update(dt);draw();btns.forEach(f=>f());requestAnimationFrame(loop);}
 function fit(){const st=document.getElementById("stage"),aw=st.clientWidth-4,ah=st.clientHeight-4,k=Math.min(aw/CW,ah/CH);cv.style.width=CW*k+"px";cv.style.height=CH*k+"px";}
+// commands from the arcade gear menu
+let menuPaused=false;addEventListener("message",e=>{const d=e.data;if(!d||d.type!=="arcade-cmd")return;
+ if(d.cmd=="mute")muted=!!d.on;
+ if(d.cmd=="pause"&&!S.paused&&!S.over){S.paused=true;menuPaused=true;}
+ if(d.cmd=="resume"&&menuPaused){menuPaused=false;S.paused=false;}});
 reset();setMode();fit();addEventListener("resize",()=>{setMode();fit();});requestAnimationFrame(loop);
 </script></body></html>

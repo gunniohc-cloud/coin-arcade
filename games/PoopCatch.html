@@ -243,5 +243,10 @@ function loop(n){const dt=Math.min(0.04,(n-last)/1000);last=n;
  if(state=='pause')panel('일시정지',['커서가 해제되었습니다','','클릭하면 이어서 하기']);
  if(state=='over')panel('게임 오버',['점수 '+S.score+'   ·   최고 '+S.best,'','클릭하여 다시하기']);
  requestAnimationFrame(loop);}
+// commands from the arcade gear menu
+let menuPaused=false;addEventListener("message",e=>{const d=e.data;if(!d||d.type!=="arcade-cmd")return;
+ if(d.cmd=="mute")muted=!!d.on;
+ if(d.cmd=="pause"&&state=="play"){state="pause";menuPaused=true;try{document.exitPointerLock()}catch(x){}}
+ if(d.cmd=="resume"&&menuPaused){menuPaused=false;state="play";}});
 requestAnimationFrame(loop);
 </script></body></html>

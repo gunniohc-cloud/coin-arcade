@@ -148,6 +148,7 @@ addEventListener('keydown',e=>{const k=e.key.toLowerCase();
  if(k=='b'&&!$('bBet').disabled)betOne();if(k=='d'&&!$('bDbl').disabled)double();if(k=='t'&&!$('bTake').disabled)take();
  if(k=='m')muted=!muted;});
 render();
+addEventListener("message",e=>{const d=e.data;if(d&&d.type==="arcade-cmd"&&d.cmd=="mute")muted=!!d.on;});
 const _r=render;render=function(){_r();const on=document.querySelector('.tier.on'),L=document.getElementById('ladder');if(on&&L.scrollHeight>L.clientHeight)L.scrollTop=on.offsetTop-L.offsetTop-L.clientHeight/2;};render();
 </script>
 <style>

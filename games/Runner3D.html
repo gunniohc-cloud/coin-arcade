@@ -52,6 +52,7 @@ function startBGM(){stopBGM();if(!AC)return;let step=0;const bass=[110,110,165,1
 function stopBGM(){if(bgmT)clearInterval(bgmT);bgmT=null;}
 addEventListener('keydown',e=>{if(e.key.toLowerCase()=='m'){muted=!muted;}});
 
+const VIS=60; // past this many soldiers the army stops growing on screen - the number tells the rest
 const ROAD=8.2, MAXS=400, MAXE=300, MAXB=400;
 const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(devicePixelRatio);renderer.shadowMap.enabled=true;
 document.body.appendChild(renderer.domElement);
@@ -212,7 +213,7 @@ function drawBarrel(o){const n=Math.ceil(o.hp);if(n===o.shown)return;o.shown=n;c
  x.fillStyle=o.rw.col;x.fillRect(8,6,240,60);x.fillStyle='#fff';x.font='bold 36px sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText(o.rw.txt,128,38);
  x.fillStyle='#000a';x.fillRect(20,80,216,32);x.fillStyle='#ff5040';x.fillRect(20,80,216*Math.max(0,o.hp/o.max),32);x.fillStyle='#fff';x.font='bold 26px sans-serif';x.fillText(n,128,97);t.needsUpdate=true;}
 function removeObj(o){scene.remove(o.mesh);o.dead=1;}
-function gainReward(rw){const k=rw.big?2:1;if(rw.k=="dmg")S.dmg+=0.5*k;else if(rw.k=="rate")S.rate=Math.max(0.06,S.rate*(rw.big?0.65:0.8));else if(rw.k=='add')S.count+=10;else S.count*=2;SFX.power();flash(rw.txt+' 획득!');}
+function gainReward(rw){const k=rw.big?2:1;if(rw.k=="dmg")S.dmg+=0.5*k;else if(rw.k=="rate")S.rate=Math.max(0.06,S.rate*(rw.big?0.65:0.8));else if(rw.k=='add')S.count+=rw.v||10;else S.count*=2;SFX.power();flash(rw.txt+' 획득!');}
 // a row = two lanes. Each lane holds a negative gate (shoot it up), a reward barrel (break it),
 // a barrel shielding a good gate, or an enemy group (hold the lane or the base takes damage).
 // three lanes: left/middle carry enemy squads hiding behind an item shield, the right lane streams soldier gates
@@ -220,7 +221,7 @@ const LX=[-5.4,0,5.4],LW=5.4,PUSH=0.75,SPAWN_Z=-40; // things appear closer so t
 function laneOf(x){return x<-LW/2?0:x<LW/2?1:2;}
 function spawnWave(){S.gatesN++;const fp=firepower(),both=S.gatesN>2&&Math.random()<0.4,first=Math.random()<0.5?0:1;
  (both?[0,1]:[first]).forEach(l=>{
-  const rw=Math.random()<.1&&S.count<80?REWARDS[3]:REWARDS[Math.floor(Math.random()*3)];
+  let rw=Math.random()<.1&&S.count<80?REWARDS[3]:REWARDS[Math.floor(Math.random()*3)];if(rw.k=='add'){const v=Math.max(10,Math.round(S.count*0.35/5)*5,gateLevel()*12);rw={...rw,v,txt:'👥 +'+v};}
   makeBarrel(l,SPAWN_Z,Math.max(6,fp*(1.8+Math.random()*0.8))*(1+0.25*(gateLevel()-1)),rw);   // the item is the squad's shield: break it to reach them (and keep the item)
   spawnEnemies(l,SPAWN_Z-3.5);});}
 function spawnRow(){S.gatesN++;const z=-90,ez=-90-2.5*(90/S.speed),fp=firepower(),st=S.stage;
@@ -238,7 +239,7 @@ function updateObjs(mv,R,dt){const lane=laneOf(S.px);
   if(o.type=='gate'){drawGate(o);if(!o.done&&o.z>=0){o.done=1;o.mesh.material.opacity=.25;}}
   else{drawBarrel(o);o.roll.rotation.x+=(mv+PUSH*dt)/0.75;
    if(o.z>-R-0.75&&o.z<1){ // every soldier standing in this lane gets flattened
-    const n=Math.min(S.count,MAXS);let inLane=0;for(let i=0;i<n;i++)if(laneOf(S.px+form[i][0])==o.lane)inLane++;
+    const n=Math.min(S.count,VIS);let inLane=0;for(let i=0;i<n;i++)if(laneOf(S.px+form[i][0])==o.lane)inLane++;
     if(inLane){const loss=Math.min(S.count,Math.max(1,Math.round(inLane*S.count/n*0.5)));S.count-=loss;SFX.hurt();shake=0.4;burst(o.x,o.z,14,0.6);flash('통에 깔림! -'+loss);removeObj(o);continue;}}}
   if(o.z>10)removeObj(o);}
  S.objs=S.objs.filter(o=>!o.dead);}
@@ -265,7 +266,7 @@ function spawnMini(){const vol=Math.max(1,Math.min(S.count,25)),dps=vol*S.dmg*Ma
 let flashT=0;function flash(t){const el=document.getElementById('flash');el.textContent=t;el.style.opacity=1;flashT=1.2;}
 // soldier formation offsets (spiral)
 const form=[];for(let i=0;i<MAXS;i++){const a=i*2.39996,r=0.32*Math.sqrt(i);/* tall ellipse that grows backward (narrow side to side, so a big army can still partly dodge a barrel) */form.push([Math.cos(a)*r*0.6,Math.sin(a)*r*1.3-r*0.5]);}
-function crowdR(){return 0.32*Math.sqrt(Math.min(S.count,MAXS));}
+function crowdR(){return 0.32*Math.sqrt(Math.min(S.count,VIS));}
 // input
 const keys={};addEventListener('keydown',e=>keys[e.key.toLowerCase()]=1);addEventListener('keyup',e=>keys[e.key.toLowerCase()]=0);
 // steering: drag anywhere (mouse, pen or finger)
@@ -324,7 +325,7 @@ function update(dt){
  S.flashT=Math.max(0,(S.flashT||0)-dt);S.recoil=Math.max(0,(S.recoil||0)-dt*7);
  for(const p of S.parts){p.vy-=12*dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.z+=p.vz*dt+mv;p.t-=dt;}S.parts=S.parts.filter(p=>p.t>0&&p.y>0);
  S.fireT-=dt;if(S.fireT<=0&&S.count>0){S.fireT=S.rate;SFX.shoot();aimList=buildAim();S.fired=[];S.flashT=0.07;S.recoil=1;const shots=Math.min(S.count,25),per=S.dmg*Math.max(1,S.count/25);
-  for(let i=0;i<shots;i++){const fi=Math.floor(Math.random()*Math.min(S.count,MAXS)),f=form[fi];S.fired.push(fi);if(S.bullets.length<MAXB){const b={x:S.px+f[0],z:f[1]-0.3,d:per,life:1.3,vx:0};const t=pickAim();if(t){const tt=Math.max(0.05,(b.z-t.z)/40);b.vx=Math.max(-25,Math.min(25,(t.x-b.x)/tt));}S.bullets.push(b);}}}
+  for(let i=0;i<shots;i++){const fi=Math.floor(Math.random()*Math.min(S.count,VIS)),f=form[fi];S.fired.push(fi);if(S.bullets.length<MAXB){const b={x:S.px+f[0],z:f[1]-0.3,d:per,life:1.3,vx:0};const t=pickAim();if(t){const tt=Math.max(0.05,(b.z-t.z)/40);b.vx=Math.max(-25,Math.min(25,(t.x-b.x)/tt));}S.bullets.push(b);}}}
  for(const b of S.bullets){b.pz=b.z;b.z-=40*dt;b.x+=(b.vx||0)*dt;b.life-=dt;if(b.life<=0)b.dead=1;}
  // enemies
  const R=crowdR()+0.3;updateObjs(S.boss?S.speed*dt:mv,R,dt);
@@ -345,7 +346,7 @@ function update(dt){
  S.count=Math.min(S.count,99999);if(S.count<=0||S.base<=0){S.count=Math.max(0,S.count);end();}
 }
 function render(){
- if(S){const n=Math.min(S.count,MAXS),t=performance.now()/120;
+ if(S){const n=Math.min(S.count,VIS),t=performance.now()/120;
   for(let i=0;i<n;i++){const f=form[i],bob=Math.abs(Math.sin(t+i))*0.08;
    dummy.position.set(S.px+f[0],0.35+bob,f[1]);dummy.updateMatrix();soldierM.setMatrixAt(i,dummy.matrix);
    dummy.position.y=0.85+bob;dummy.updateMatrix();headM.setMatrixAt(i,dummy.matrix);

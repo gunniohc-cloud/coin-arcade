@@ -59,7 +59,7 @@ const SFX={
  sword:()=>once('sword',90,()=>{noise(.07,.12,4200,3,0,-2000);}),
  boom:()=>{noise(.7,.5,300,0.6,0,-220);tone(70,.6,'sawtooth',.35,-30);},
  // the ultimate's 'ding': a bright metallic ring with long decay, over a deep thump and a rushing whoosh
- ding:()=>{[[1318,.35,2.2],[2637,.16,1.6],[3951,.08,1.1],[659,.12,1.8]].forEach(([f,v,d])=>tone(f,d,'sine',v));tone(55,.5,'sine',.5,-20);noise(.6,.25,1800,1.2,0.02,-1400);},
+ ding:()=>{const f0=196;[[1,.42,3.2],[2.0,.2,2.6],[2.42,.14,2.2],[3.0,.1,1.8],[4.2,.05,1.2],[0.5,.22,3.4]].forEach(([m,v,d])=>tone(f0*m,d,'sine',v));tone(f0*1.003,3.0,'sine',.2);tone(48,.6,'sine',.5,-12);noise(.5,.18,900,1,0.02,-700);},
  coin:()=>tone(1300,.07,'triangle',.12),
  pick:()=>{tone(700,.08,'square',.1,500);tone(1050,.08,'square',.06,0,.06);},
  horn:()=>{[0,.18,.36].forEach((t,i)=>tone([220,277,330][i],.32,'sawtooth',.09,0,t));},

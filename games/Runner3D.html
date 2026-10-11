@@ -20,8 +20,8 @@ body.port #fsCorner,body.fs #fsCorner{display:none}
 #bossbar{position:fixed;top:44px;left:50%;transform:translateX(-50%);width:400px;height:14px;background:#0006;border-radius:7px;display:none}
 #bossbar div{height:100%;background:#e33;border-radius:7px}
 </style></head><body>
-<div id="rot" hidden><div>📱↻</div>가로 화면 전용 게임이에요<br>휴대폰을 가로로 돌려주세요</div><div id="hud"></div><div id="flash"></div><div id="bossbar"><div></div></div><div id="cnt">1</div><div id="pad"><button data-l="0" aria-label="왼쪽 차선">◀</button><button data-l="1" aria-label="가운데 차선">●</button><button data-l="2" aria-label="오른쪽 차선">▶</button><button id="fsBtn">⛶ 가로 전체화면으로 하기</button></div><button id="fsCorner" aria-label="전체화면">⛶ 전체화면</button>
-<div id="msg"><h1>Math Army 3D</h1>드래그 또는 화면 왼쪽·가운데·오른쪽 탭으로 차선 이동 · A/D · ←/→ · M 음소거<br>왼쪽·가운데로 적이 아이템 방패를 들고 밀려옵니다. 방패를 깨서 아이템을 얻고 적을 쓰러뜨리세요!<br>오른쪽 차선의 파란 게이트는 쏘면 숫자가 올라가고, 통과하면 병사가 늘어나요<br><br><b>클릭하여 시작</b></div>
+<div id="rot" hidden><div>📱↻</div>가로 화면 전용 게임이에요<br>휴대폰을 가로로 돌려주세요</div><div id="hud"></div><div id="flash"></div><div id="bossbar"><div></div></div><div id="cnt">1</div><div id="pad"><button id="fsBtn">⛶ 가로 전체화면으로 하기</button></div><button id="fsCorner" aria-label="전체화면">⛶ 전체화면</button>
+<div id="msg"><h1>Math Army 3D</h1>화면을 좌우로 드래그해서 이동 · A/D · ←/→ · M 음소거<br>왼쪽·가운데로 적이 아이템 방패를 들고 밀려옵니다. 방패를 깨서 아이템을 얻고 적을 쓰러뜨리세요!<br>오른쪽 차선의 파란 게이트는 쏘면 숫자가 올라가고, 통과하면 병사가 늘어나요<br><br><b>클릭하여 시작</b></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 // ---- sound (Web Audio synth) ----
@@ -238,7 +238,7 @@ function updateObjs(mv,R,dt){const lane=laneOf(S.px);
   else{drawBarrel(o);o.roll.rotation.x+=(mv+PUSH*dt)/0.75;
    if(o.z>-R-0.75&&o.z<1){ // every soldier standing in this lane gets flattened
     const n=Math.min(S.count,MAXS);let inLane=0;for(let i=0;i<n;i++)if(laneOf(S.px+form[i][0])==o.lane)inLane++;
-    if(inLane){const loss=Math.min(S.count,Math.round(inLane*S.count/n));S.count-=loss;SFX.hurt();shake=0.4;burst(o.x,o.z,14,0.6);flash('통에 깔림! -'+loss);removeObj(o);continue;}}}
+    if(inLane){const loss=Math.min(S.count,Math.max(1,Math.round(inLane*S.count/n*0.5)));S.count-=loss;SFX.hurt();shake=0.4;burst(o.x,o.z,14,0.6);flash('통에 깔림! -'+loss);removeObj(o);continue;}}}
   if(o.z>10)removeObj(o);}
  S.objs=S.objs.filter(o=>!o.dead);}
 // bullets crossing an object's plane this frame hit it (front-most object in that lane first)
@@ -267,11 +267,11 @@ const form=[];for(let i=0;i<MAXS;i++){const a=i*2.39996,r=0.32*Math.sqrt(i);/* t
 function crowdR(){return 0.32*Math.sqrt(Math.min(S.count,MAXS));}
 // input
 const keys={};addEventListener('keydown',e=>keys[e.key.toLowerCase()]=1);addEventListener('keyup',e=>keys[e.key.toLowerCase()]=0);
-// steering: drag anywhere (mouse, pen or finger) or tap the left / middle / right of the screen to jump to that lane
+// steering: drag anywhere (mouse, pen or finger)
 let drag=null;const SENS=()=>ROAD*2.2/Math.max(320,innerWidth);
 function dStart(x,t){if(!S||(t&&t.closest&&t.closest("#pad,#fsCorner")))return;drag={x,p:S.tx,moved:false};}
 function dMove(x){if(!drag||!running)return;if(Math.abs(x-drag.x)>8)drag.moved=true;S.tx=drag.p+(x-drag.x)*SENS();}
-function dEnd(x){if(drag&&!drag.moved&&running){const third=x<innerWidth/3?0:x<innerWidth*2/3?1:2;S.tx=LX[third];}drag=null;}
+function dEnd(x){drag=null;}
 let touchMode=false;
 addEventListener('touchstart',e=>{touchMode=true;dStart(e.touches[0].clientX,e.target);},{passive:true});
 addEventListener('touchmove',e=>{dMove(e.touches[0].clientX);if(e.cancelable)e.preventDefault();},{passive:false});
@@ -371,13 +371,15 @@ function render(){
   hud.textContent=`🏠 기지 ${S.base}  ·  스테이지 ${S.stage}  ·  진행 ${prog}  ·  공격력 ${S.dmg.toFixed(1)}  ·  공속 ${(1/S.rate).toFixed(1)}/s`;}
  renderer.render(scene,cam);}
 // lane buttons + fullscreen (landscape lock where the browser allows it)
-document.querySelectorAll("#pad [data-l]").forEach(b=>b.addEventListener("pointerdown",e=>{e.preventDefault();if(S)S.tx=LX[+b.dataset.l];}));
-function goFS(){try{const el=document.documentElement,fs=el.requestFullscreen||el.webkitRequestFullscreen;const p=fs&&fs.call(el);(p&&p.then?p:Promise.resolve()).then(()=>screen.orientation&&screen.orientation.lock&&screen.orientation.lock("landscape")).catch(()=>{});}catch(e){}}
+
+function goFS(){ // in the arcade the parent page owns fullscreen; standalone the game asks for it itself
+ if(parent!==window){try{parent.postMessage({type:'arcade-fs'},'*')}catch(e){}return;}
+ try{const de=document.documentElement;if(!(de.requestFullscreen||de.webkitRequestFullscreen)){flash('휴대폰을 가로로 돌려주세요');return;}const el=document.documentElement,fs=el.requestFullscreen||el.webkitRequestFullscreen;const p=fs&&fs.call(el);(p&&p.then?p:Promise.resolve()).then(()=>screen.orientation&&screen.orientation.lock&&screen.orientation.lock("landscape")).catch(()=>{});}catch(e){}}
 document.getElementById("fsBtn").onclick=goFS;document.getElementById("fsCorner").onclick=goFS;
 document.addEventListener("fullscreenchange",()=>document.body.classList.toggle("fs",!!document.fullscreenElement));
 // commands from the arcade gear menu
 let menuPaused=false;addEventListener("message",e=>{const d=e.data;if(!d||d.type!=="arcade-cmd")return;
- if(d.cmd=="mute")muted=!!d.on;
+ if(d.cmd=="mute")muted=!!d.on;if(d.cmd=="flash")flash(d.text);
  if(d.cmd=="pause"&&running){running=false;menuPaused=true;}
  if(d.cmd=="resume"&&menuPaused){menuPaused=false;running=true;last=performance.now();}});
 reset();requestAnimationFrame(tick);

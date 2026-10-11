@@ -15,7 +15,7 @@ canvas{touch-action:none;display:block}
 #bossbar div{height:100%;background:#e33;border-radius:7px}
 </style></head><body>
 <div id="rot" hidden><div>📱↻</div>가로 화면 전용 게임이에요<br>휴대폰을 가로로 돌려주세요</div><div id="hud"></div><div id="flash"></div><div id="bossbar"><div></div></div><div id="cnt">1</div>
-<div id="msg"><h1>Math Army 3D</h1>A/D · ←/→ · 마우스 드래그로 좌우 이동 · M 음소거<br>왼쪽·가운데로 적이 아이템 방패를 들고 밀려옵니다. 방패를 깨서 아이템을 얻고 적을 쓰러뜨리세요!<br>오른쪽 차선의 파란 게이트는 쏘면 숫자가 올라가고, 통과하면 병사가 늘어나요<br><br><b>클릭하여 시작</b></div>
+<div id="msg"><h1>Math Army 3D</h1>드래그 또는 화면 왼쪽·가운데·오른쪽 탭으로 차선 이동 · A/D · ←/→ · M 음소거<br>왼쪽·가운데로 적이 아이템 방패를 들고 밀려옵니다. 방패를 깨서 아이템을 얻고 적을 쓰러뜨리세요!<br>오른쪽 차선의 파란 게이트는 쏘면 숫자가 올라가고, 통과하면 병사가 늘어나요<br><br><b>클릭하여 시작</b></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 // ---- sound (Web Audio synth) ----
@@ -252,8 +252,19 @@ const form=[];for(let i=0;i<MAXS;i++){const a=i*2.39996,r=0.32*Math.sqrt(i);/* t
 function crowdR(){return 0.32*Math.sqrt(Math.min(S.count,MAXS));}
 // input
 const keys={};addEventListener('keydown',e=>keys[e.key.toLowerCase()]=1);addEventListener('keyup',e=>keys[e.key.toLowerCase()]=0);
-let drag=null;addEventListener('pointerdown',e=>{drag={x:e.clientX,p:S?S.tx:0};});addEventListener('pointerup',()=>drag=null);
-addEventListener('pointermove',e=>{if(drag&&running)S.tx=drag.p+(e.clientX-drag.x)/innerWidth*ROAD*2.2;});
+// steering: drag anywhere (mouse, pen or finger) or tap the left / middle / right of the screen to jump to that lane
+let drag=null;const SENS=()=>ROAD*2.2/Math.max(320,innerWidth);
+function dStart(x){if(!S)return;drag={x,p:S.tx,moved:false};}
+function dMove(x){if(!drag||!running)return;if(Math.abs(x-drag.x)>8)drag.moved=true;S.tx=drag.p+(x-drag.x)*SENS();}
+function dEnd(x){if(drag&&!drag.moved&&running){const third=x<innerWidth/3?0:x<innerWidth*2/3?1:2;S.tx=LX[third];}drag=null;}
+let touchMode=false;
+addEventListener('touchstart',e=>{touchMode=true;dStart(e.touches[0].clientX);},{passive:true});
+addEventListener('touchmove',e=>{dMove(e.touches[0].clientX);if(e.cancelable)e.preventDefault();},{passive:false});
+addEventListener('touchend',e=>{dEnd(e.changedTouches[0].clientX);},{passive:true});
+addEventListener('touchcancel',()=>{drag=null;});
+addEventListener('pointerdown',e=>{if(e.pointerType=='touch'||touchMode)return;dStart(e.clientX);});
+addEventListener('pointermove',e=>{if(e.pointerType=='touch'||touchMode)return;dMove(e.clientX);});
+addEventListener('pointerup',e=>{if(e.pointerType=='touch'||touchMode)return;dEnd(e.clientX);});
 msg.onclick=()=>{initAudio();AC.resume();if(matchMedia('(pointer:coarse)').matches){try{const el=document.documentElement,fs=el.requestFullscreen||el.webkitRequestFullscreen;const p=fs&&fs.call(el);(p&&p.then?p:Promise.resolve()).then(()=>screen.orientation&&screen.orientation.lock&&screen.orientation.lock('landscape')).catch(()=>{});}catch(e){}}reset();running=true;msg.style.display='none';startBGM();};
 function end(win){running=false;SFX.over();try{parent.postMessage({type:"arcade-score",game:"run",score:Math.floor(S.dist),detail:"스테이지 "+S.stage},"*")}catch(e){}msg.style.display='flex';msg.innerHTML=`<h1>게임 오버</h1>${S.base<=0?'기지가 무너졌습니다<br>':'병사가 전멸했습니다<br>'}스테이지 ${S.stage} 도달<br><br><b>클릭하여 재시작</b>`;}
 

@@ -69,15 +69,14 @@ function startBGM(){if(bgmT)return;let step=0;const bass=[110,110,147,147,131,13
 const UNITS=[
  {key:'1',ic:'⚔️',name:'검사',cost:30,hp:60,dmg:8,range:24,spd:50,rate:.8,col:'#4f8fff',kind:'sword'},
  {key:'2',ic:'🗼',name:'타워',cost:90,hp:320,dmg:9,range:210,spd:0,rate:.85,col:'#8a8f9c',kind:'tower',ranged:1,fixed:1},
- {key:'3',ic:'🛡️',name:'기사',cost:110,hp:220,dmg:18,range:26,spd:36,rate:1.1,col:'#b07bff',kind:'knight'},
- {key:'4',ic:'🪨',name:'투석기',cost:140,hp:260,dmg:28,range:330,spd:0,rate:3.2,col:'#8a5a2e',kind:'catapult',ranged:1,fixed:1,cat:1}];
+ {key:'3',ic:'🪨',name:'투석기',cost:140,hp:200,dmg:28,range:470,spd:0,rate:3.2,col:'#8a5a2e',kind:'catapult',ranged:1,fixed:1,cat:1}];
 const UPS=[
  {key:'q',ic:'👑',sh:'영주공격',name:'영주 공격력',lv:'dmg',max:99,cost:l=>45+l*35,apply:()=>S.lordDmg+=5},
  {key:'w',ic:'⚡',sh:'영주공속',name:'영주 공속',lv:'rate',max:15,cost:l=>60+l*45,apply:()=>S.lordRate*=.87},
  {key:'e',ic:'🏰',sh:'성벽',name:'성벽 강화',lv:'wall',max:99,cost:l=>50+l*40,apply:()=>{S.castleMax+=100;S.castle=Math.min(S.castleMax,S.castle+150)}},
  {key:'r',ic:'🎯',sh:'멀티샷',name:'영주 멀티샷',lv:'multi',max:4,cost:l=>[1200,2500,4500,8000][l],label:l=>l<4?(l+2)+'발 활':'5발 MAX',apply:()=>S.arrows++},
- {key:'t',ic:'🗡️',sh:'병사공격',name:'병사 공격력',lv:'uatk',max:99,cost:l=>70+l*55,apply:()=>{S.uAtk+=.2;S.units.forEach(u=>u.dmg=u.base.dmg*S.uAtk)}},
- {key:'y',ic:'❤️',sh:'병사체력',name:'병사 체력',lv:'uhp',max:99,cost:l=>70+l*55,apply:()=>{S.uHp+=.25;S.units.forEach(u=>{const r=u.hp/u.max;u.max=u.base.hp*S.uHp;u.hp=u.max*r;})}}];
+ {key:'t',ic:'🗡️',sh:'병사공격',name:'병사 공격력',lv:'uatk',max:99,cost:l=>70+l*55,apply:()=>{S.uAtk+=.3;S.units.forEach(u=>u.dmg=u.base.dmg*S.uAtk)}},
+ {key:'y',ic:'❤️',sh:'병사체력',name:'병사 체력',lv:'uhp',max:99,cost:l=>70+l*55,apply:()=>{S.uHp+=.6;S.units.forEach(u=>{const r=u.hp/u.max;u.max=u.base.hp*S.uHp;u.hp=u.max*r;})}}];
 function reset(go){S={started:!!go,gold:90,wave:1,castle:300,castleMax:300,lordDmg:10,lordRate:1,lordT:0,arrows:1,tArch:1,uAtk:1,uHp:1,income:2,incT:0,
  units:[],enemies:[],shots:[],fx:[],boulders:[],items:[],bombs:1,spawnLeft:0,spawnT:0,waveT:1,over:false,paused:false,kills:0,shake:0,t:0,
  lv:{dmg:0,rate:0,wall:0,multi:0,tarch:0,uatk:0,uhp:0},lordAim:0,waveBonus:0};S.spawnLeft=8+S.wave*4;S.eliteAt=Math.ceil(S.spawnLeft/2);}
@@ -175,7 +174,7 @@ function drawCastleHP(){const p=Math.max(0,S.castle/S.castleMax),col=p>.5?'#5be3
 // from Lv2, flaming boulders that leave enemies burning ----------
 const catCost=u=>[80,120,170,230][(u.lvl||1)-1];
 function catFire(u){let best=null,bs=-1;
- for(const e of S.enemies){const d=Math.hypot(e.x-u.x,e.y-u.y);if(d>u.range||e.hp-e.pend<=0)continue;let n=0;for(const o of S.enemies)if(Math.hypot(o.x-e.x,o.y-e.y)<60)n++;
+ for(const e of S.enemies){const d=Math.hypot(e.x-u.x,e.y-u.y);if(d>u.range||d<130||e.hp-e.pend<=0)continue;let n=0; /* catapult can't hit things right next to it */for(const o of S.enemies)if(Math.hypot(o.x-e.x,o.y-e.y)<60)n++;
   const sc=n*10-d*0.01+(e.x<u.x+200?5:0);if(sc>bs){bs=sc;best=e;}}
  if(!best)return false;const L=u.lvl||1,lead=best.spd*0.9;
  S.boulders.push({x:u.x,y:u.y,sx:u.x,sy:u.y,tx:best.x-lead,ty:best.y,t:0,dur:0.9,lvl:L,dmg:u.dmg*S.uAtk*(1+0.45*(L-1)),R:55+L*12});u.atk=1;SFX.sword();return true;}
@@ -213,15 +212,15 @@ function drawTower(x,y,u,ghost){ // stone archer tower; y is its base
 function drawUnit(u){if(u.cat){drawCatapult(u.x,u.y,u);return;}if(u.fixed){drawTower(u.x,u.y,u);return;}const bob=Math.abs(Math.sin(u.walk))*2,x=u.x+(u.face||1)*(u.atk||0)*8,y=u.y-bob,f=u.face||1;
  E(u.x,u.y+12,13,4,'#0004');
  g.fillStyle='#3a2a1a';g.fillRect(x-6,y+4,4,8+Math.sin(u.walk)*2);g.fillRect(x+2,y+4,4,8-Math.sin(u.walk)*2);
- E(x,y-2,u.kind=='knight'?12:10,11,u.col);E(x,y-16,8,8,'#ffd9b0');
- if(u.kind=='knight'){E(x,y-18,9,9,'#c8ccd6');g.fillStyle='#222';g.fillRect(x-6+f*2,y-19,10,2);}
+ const kn=u.kind=='knight'||(u.kind=='sword'&&S.lv.uhp>=3);E(x,y-2,kn?12:10,11,kn?(S.lv.uatk>=3?'#d0a030':'#7a8aa8'):u.col);E(x,y-16,8,8,'#ffd9b0');
+ if(kn){E(x,y-18,9,9,'#c8ccd6');g.fillStyle='#222';g.fillRect(x-6+f*2,y-19,10,2);}
  else if(u.kind=='bow'){g.fillStyle='#2f7a3f';g.beginPath();g.moveTo(x-9,y-18);g.lineTo(x,y-30);g.lineTo(x+9,y-18);g.fill();}
  else{g.fillStyle='#8b5a2b';g.fillRect(x-8,y-24,16,4);}
  g.fillStyle='#222';g.fillRect(x+f*3,y-17,2,2);
  g.save();g.translate(x+f*10,y-4);g.scale(f,1);g.rotate(u.ranged?-.2:-1+u.atk*1.6);
  if(u.ranged){g.strokeStyle='#6b3d1a';g.lineWidth=2;g.beginPath();g.arc(0,0,10,-1.3,1.3);g.stroke();}
  else{g.fillStyle='#dfe4ec';g.fillRect(-2,-22,4,22);g.fillStyle='#8b5a2b';g.fillRect(-5,-2,10,3);}g.restore();
- if(u.kind=='knight'){g.fillStyle='#8a6b3d';E(x-f*9,y-2,6,9,'#8a6b3d');}
+ if(kn){g.fillStyle='#8a6b3d';E(x-f*9,y-2,6,9,S.lv.uhp>=5?'#c0c8d8':'#8a6b3d');}
  g.fillStyle='#0008';g.fillRect(x-12,y-34,24,4);g.fillStyle='#5be36b';g.fillRect(x-12,y-34,24*u.hp/u.max,4);}
 function drawEnemy(e){const bob=Math.abs(Math.sin(e.walk))*2,x=e.x,y=e.y-bob,r=e.r;
  E(e.x,e.y+r*.9,r,r*.3,'#0004');

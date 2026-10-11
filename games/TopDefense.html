@@ -96,7 +96,7 @@ function spawnEnemy(){const w=S.wave,bossN=Math.floor(w/5),boss=w%5==0&&(S.spawn
  else if(r<.4&&w>3){e.hp*=2.5;e.spd*=.6;e.kind='brute';e.r=18;e.gold*=2;}
  // elite mid-boss: one per wave (from wave 2), drops a bomb when killed
  if(!boss&&w>=2&&S.spawnLeft==S.eliteAt){e.hp*=7;e.spd=26;e.r=22;e.kind='elite';e.dmg*=2.5;e.gold*=6;}
- if(boss){const g=1+0.3*(bossN-1);e.hp=(26+w*12+w*w*.35)*18*g*g*(1+Math.max(0,w-20)*0.07);e.spd=22+bossN*1.5;e.r=Math.min(46,30+bossN*3);e.kind='boss';e.dmg*=4*g;e.gold=80*bossN;e.tier=bossN;if(w%10==0){e.hp*=3;e.dmg*=1.6;e.r=Math.min(54,e.r+8);e.spd*=0.85;e.gold*=2;e.mega=1;}}
+ if(boss){const g=1+0.3*(bossN-1);e.hp=(26+w*12+w*w*.35)*18*g*g*(1+Math.max(0,w-20)*0.07);e.spd=22+bossN*1.5;e.r=Math.min(46,30+bossN*3);e.kind='boss';e.dmg*=4*g;e.gold=80*bossN;e.tier=bossN;if(w%10==0&&(S.megaN||0)<w/10){S.megaN=(S.megaN||0)+1;e.hp*=3;e.dmg*=1.6;e.r=Math.min(54,e.r+8);e.spd*=0.85;e.gold*=2;e.mega=1;}}
  e.max=e.hp;S.enemies.push(e);}
 const alive=e=>e.hp>0;
 // nearest enemy that isn't already doomed by arrows in flight
@@ -116,7 +116,7 @@ function update(dt){
  S.incT+=dt;if(S.incT>=1){S.incT=0;S.gold+=S.income;}
  if(S.spawnLeft>0){S.spawnT-=dt;if(S.spawnT<=0){spawnEnemy();S.spawnLeft--;S.spawnT=Math.max(.25,1.1-S.wave*.06);}}
  else if(!S.enemies.length){if(!S.waveBonus){S.waveBonus=1;const [bx,by]=PORT?unP(PW/2,PH/2-60):[W/2,TOP+60];gainBomb(bx,by,'웨이브 클리어! 🏹 필살 +1');}
-  S.waveT-=dt;if(S.waveT<=0){S.waveBonus=0;S.wave++;SFX.horn();{const bonus=40+S.wave*12;S.gold+=bonus;const [bx,by]=PORT?unP(PW/2,PH/2-20):[W/2,TOP+100];S.fx.push({x:bx,y:by,t:1.4,txt:'💰 웨이브 보너스 +'+bonus+'G',col:'#ffd27a'});}S.waveT=1;S.spawnLeft=8+S.wave*4;S.eliteAt=Math.ceil(S.spawnLeft/2);}}
+  S.waveT-=dt;if(S.waveT<=0){S.waveBonus=0;S.wave++;SFX.horn();{const bonus=40+S.wave*12;S.gold+=bonus;const [bx,by]=PORT?unP(PW/2,PH/2-20):[W/2,TOP+100];S.fx.push({x:bx,y:by,t:1.4,txt:'💰 웨이브 보너스 +'+bonus+'G',col:'#ffd27a'});}S.waveT=1;S.megaN=0;S.spawnLeft=8+S.wave*4;S.eliteAt=Math.ceil(S.spawnLeft/2);}}
  S.lordT-=dt;if(S.lordT<=0&&fireLord())S.lordT=S.lordRate;
  // defensive AI: archers hold a line near the wall; melee only sally out to meet enemies inside the guard zone, then hurry home
  const ARCH_LINE=CX+70,MELEE_LINE=CX+420,ENGAGE=CX+450; // swordsmen can push out to the tower line

@@ -282,17 +282,18 @@ function crowdR(){return 0.32*Math.sqrt(Math.min(S.count,VIS));}
 const keys={};addEventListener('keydown',e=>keys[e.key.toLowerCase()]=1);addEventListener('keyup',e=>keys[e.key.toLowerCase()]=0);
 // steering: drag anywhere (mouse, pen or finger)
 let drag=null;const SENS=()=>ROAD*2.2/Math.max(320,innerWidth);
-function dStart(x,t){if(!S||(t&&t.closest&&t.closest("#pad,#fsCorner")))return;drag={x,p:S.tx,moved:false};}
+function dStart(x,t){if(!S||(t&&t.closest&&t.closest("#pad,#fsCorner")))return;drag={x,p:S.tx,moved:false,t0:performance.now()};}
 function dMove(x){if(!drag||!running)return;if(Math.abs(x-drag.x)>8)drag.moved=true;S.tx=drag.p+(x-drag.x)*SENS();}
 function dEnd(x){drag=null;}
 let touchMode=false;
-addEventListener('touchstart',e=>{touchMode=true;dStart(e.touches[0].clientX,e.target);},{passive:true});
+addEventListener('touchstart',e=>{if(drag&&performance.now()-(drag.t0||0)<80)return;dStart(e.touches[0].clientX,e.target);},{passive:true});
 addEventListener('touchmove',e=>{dMove(e.touches[0].clientX);if(e.cancelable)e.preventDefault();},{passive:false});
 addEventListener('touchend',e=>{dEnd(e.changedTouches[0].clientX);},{passive:true});
 addEventListener('touchcancel',()=>{drag=null;});
-addEventListener('pointerdown',e=>{if(e.pointerType=="touch"||touchMode)return;dStart(e.clientX,e.target);});
-addEventListener('pointermove',e=>{if(e.pointerType=='touch'||touchMode)return;dMove(e.clientX);});
-addEventListener('pointerup',e=>{if(e.pointerType=='touch'||touchMode)return;dEnd(e.clientX);});
+// both touch events and pointer events drive the same drag (whichever the browser delivers); the drag is absolute from its start, so doubles are harmless
+addEventListener('pointerdown',e=>{if(drag&&performance.now()-(drag.t0||0)<80)return;dStart(e.clientX,e.target);});
+addEventListener('pointermove',e=>{dMove(e.clientX);});
+addEventListener('pointerup',e=>{dEnd(e.clientX);});addEventListener('pointercancel',()=>{});
 msg.onclick=()=>{initAudio();AC.resume();reset();running=true;msg.style.display='none';startBGM();};
 function end(win){running=false;SFX.over();try{parent.postMessage({type:"arcade-score",game:"run",score:Math.floor(S.dist),detail:"스테이지 "+S.stage},"*")}catch(e){}msg.style.display='flex';msg.innerHTML=`<h1>게임 오버</h1>${S.base<=0?'기지가 무너졌습니다<br>':'병사가 전멸했습니다<br>'}스테이지 ${S.stage} 도달<br><br><b>클릭하여 재시작</b>`;}
 
@@ -427,7 +428,7 @@ function update(dt){
  for(const b of S.bullets){b.pz=b.z;b.z-=40*dt;b.x+=(b.vx||0)*dt;b.life-=dt;if(b.life<=0)b.dead=1;}
  // enemies
  const R=crowdR()+0.3;updateObjs(S.boss?S.speed*dt:mv,R,dt);weaponsUpdate(dt,R);fxUpdate(dt);
- for(const e of S.enemies){e.z+=e.mini?mv+1.25*dt:(mv+PUSH*dt)*0.5;
+ for(const e of S.enemies){const cm=S.boss?S.speed*dt:mv;e.z+=e.mini?cm+1.25*dt:(cm+PUSH*dt)*0.5; /* the stream keeps walking during the boss fight */
   if(!e.mini&&Math.abs(e.z)<R&&Math.abs(e.x-S.px)<R){e.dead=1;S.count--;SFX.hurt();}
   // enemy slipped past the army → penalty
   if(!e.dead&&e.z>R+0.5){e.dead=1;const p=e.mini?25:1;S.base=Math.max(0,S.base-p);SFX.hurt();flash(e.mini?'중간보스 돌파! 기지 -'+p:'적 돌파! 기지 -'+p);}}

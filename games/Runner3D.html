@@ -141,7 +141,7 @@ function miniMesh(){let m=miniPool.find(o=>!o.visible);if(m){m.visible=true;retu
  const club=new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.25,1.6,8),new THREE.MeshStandardMaterial({color:0x6b4a2a}));club.position.set(1,1.4,0.2);club.rotation.z=-0.5;m.add(club);
  const bar=new THREE.Mesh(new THREE.PlaneGeometry(1.6,0.14),new THREE.MeshBasicMaterial({color:0xff3333}));bar.position.y=3.1;m.add(bar);m.userData.bar=bar;
  scene.add(m);miniPool.push(m);return m;}
-function spawnMini(){const vol=Math.max(1,Math.min(S.count,25)),dps=vol*S.dmg*Math.max(1,S.count/25)/S.rate,hp=30+S.stage*30+dps*3.5;S.enemies.push({x:(Math.random()*2-1)*(ROAD-1.5),z:-90,hp,max:hp,mini:1,mesh:miniMesh()});flash('⚠ 중간보스 출현!');}
+function spawnMini(){const vol=Math.max(1,Math.min(S.count,25)),dps=vol*S.dmg*Math.max(1,S.count/25)/S.rate,hp=20+S.stage*25+dps*2.2;S.enemies.push({x:(Math.random()*2-1)*(ROAD-1.5),z:-90,hp,max:hp,mini:1,mesh:miniMesh()});flash('⚠ 중간보스 출현!');}
 let flashT=0;function flash(t){const el=document.getElementById('flash');el.textContent=t;el.style.opacity=1;flashT=1.2;}
 // soldier formation offsets (spiral)
 const form=[];for(let i=0;i<MAXS;i++){const a=i*2.39996,r=0.32*Math.sqrt(i);form.push([Math.cos(a)*r,Math.sin(a)*r]);}
@@ -187,7 +187,7 @@ function update(dt){
   if(!e.dead&&e.z>R+0.5){e.dead=1;const p=e.mini?40:3;S.base=Math.max(0,S.base-p);SFX.hurt();flash(e.mini?'중간보스 돌파! 기지 -'+p:'적 돌파! 기지 -'+p);}}
  for(const e of S.enemies)if(e.mini&&!e.dead&&Math.abs(e.z)<R+0.8&&Math.abs(e.x-S.px)<R+0.8){e.t=(e.t||0)-dt;if(e.t<=0){e.t=0.2;S.count-=1+Math.floor(S.count*0.04);SFX.hurt();}e.z-=mv+2.5*dt-0.5*dt;}
  for(const b of S.bullets){if(b.dead)continue;
-  for(const e of S.enemies){const hr=e.mini?1:0.45;if(!e.dead&&Math.abs(e.z-b.z)<hr+0.05&&Math.abs(e.x-b.x)<hr){e.hp-=b.d;b.dead=1;if(e.hp<=0){e.dead=1;SFX.kill();}break;}}
+  for(const e of S.enemies){const hr=e.mini?1.4:0.45;if(!e.dead&&Math.abs(e.z-b.z)<hr+0.05&&Math.abs(e.x-b.x)<hr){e.hp-=b.d;b.dead=1;if(e.hp<=0){e.dead=1;SFX.kill();}break;}}
   if(!b.dead&&S.boss&&Math.abs(b.z-S.boss.z)<1.2&&Math.abs(b.x)<1.6){S.boss.hp-=b.d;b.dead=1;SFX.bossHit();}}
  S.bullets=S.bullets.filter(b=>!b.dead);S.enemies=S.enemies.filter(e=>!e.dead);
  // boss

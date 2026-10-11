@@ -75,7 +75,7 @@ const UNITS=[
  {key:'3',ic:'🪨',name:'투석기',cost:400,hp:200,dmg:22,range:470,spd:0,rate:4.2,col:'#8a5a2e',kind:'catapult',ranged:1,fixed:1,cat:1}];
 const UPS=[
  {key:'q',ic:'👑',sh:'영주공격',name:'영주 공격력',lv:'dmg',max:999,cost:l=>Math.round(45+l*40+l*l*12),apply:()=>S.lordDmg+=5},
- {key:'w',ic:'⚡',sh:'영주공속',name:'영주 공속',lv:'rate',max:17,cost:l=>60+l*45,apply:()=>S.lordRate=Math.max(0.1,S.lordRate*.87)},
+ {key:'w',ic:'⚡',sh:'영주공속',name:'영주 공속',lv:'rate',max:10,cost:l=>60+l*45,apply:()=>S.lordRate=Math.max(0.1,S.lordRate*.87)},
  {key:'e',ic:'🏰',sh:'성벽',name:'성벽 강화',lv:'wall',max:99,cost:l=>50+l*40,apply:()=>{S.castleMax+=100;S.castle=Math.min(S.castleMax,S.castle+150)}},
  {key:'r',ic:'🎯',sh:'멀티샷',name:'영주 멀티샷',lv:'multi',max:4,cost:l=>[1200,2500,4500,8000][l],label:l=>l<4?(l+2)+'발 활':'5발 MAX',apply:()=>S.arrows++},
  {key:'t',ic:'🗡️',sh:'병사공격',name:'병사 공격력',lv:'uatk',max:99,cost:l=>70+l*55,apply:()=>{S.uAtk+=.3;S.units.forEach(u=>u.dmg=u.base.dmg*S.uAtk)}},

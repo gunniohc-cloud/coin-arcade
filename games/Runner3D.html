@@ -375,7 +375,7 @@ function weaponsUpdate(dt,R){if(!S.w)S.w={laser:0,flame:0,missile:0};const W=S.w
  for(const f of S.flames){f.t+=dt;f.x+=f.vx*dt;f.y+=f.vy*dt;f.z+=f.vz*dt;}S.flames=S.flames.filter(f=>f.t<f.life); // homing missiles: pick the nearest threat anywhere on the road and splash it
  // rockets: salvo size grows with the army, they fly straight ahead from the squad and explode on the first thing they hit (splash)
  if(W.missile){S.mslT=(S.mslT||0)-dt;if(S.mslT<=0){const iv=Math.max(0.35,1.0-W.missile*0.15),n=Math.min(14,1+Math.floor(S.count/12)+(W.missile-1));S.mslT=iv;
-   const dmg=base*iv*1.5/n,nv=Math.min(S.count,VIS);for(let k=0;k<n&&S.missiles.length<80;k++){const f=form[Math.floor(Math.random()*Math.max(1,nv))];S.missiles.push({x:px+f[0],y:1.1,z:f[1]-0.6,t:2.2,dmg});}}}
+   const dmg=base*iv*1.1/n,nv=Math.min(S.count,VIS);for(let k=0;k<n&&S.missiles.length<80;k++){const f=form[Math.floor(Math.random()*Math.max(1,nv))];S.missiles.push({x:px+f[0],y:1.1,z:f[1]-0.6,t:2.2,dmg});}}}
  const explode=(x,z,dmg)=>{const R=2.2;for(const e of S.enemies){const d=Math.hypot(e.x-x,e.z-z);if(d<R)hurtEnemy(e,dmg*(d<0.8?1:0.45));}
   for(const o of S.objs)if(o.type=='barrel'&&!o.dead&&Math.abs(o.x-x)<LW/2&&Math.abs(o.z+0.75-z)<R)hurtObj(o,dmg,0);
   if(S.boss&&Math.abs(x)<2.2&&Math.abs(S.boss.z+1-z)<R+0.5)S.boss.hp-=dmg*3;burst(x,z,8,1);ring(x,z,2.2,0xffd0a0);};

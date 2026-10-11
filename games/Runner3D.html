@@ -3,14 +3,16 @@
 <style>
 html,body{margin:0;height:100%;overflow:hidden;touch-action:none;background:#87b8e8;font-family:"Malgun Gothic",sans-serif;user-select:none}
 #hud{position:fixed;top:10px;left:0;right:0;text-align:center;color:#fff;font-size:20px;font-weight:bold;text-shadow:0 2px 4px #0008;pointer-events:none}
-#cnt{position:fixed;color:#fff;font-size:26px;font-weight:900;background:#2f7cf6;padding:2px 12px;border-radius:14px;transform:translate(-50%,-100%);pointer-events:none;box-shadow:0 2px 6px #0006}
+#cnt{position:fixed;color:#fff;font-size:32px;font-weight:900;background:#2f7cf6;padding:2px 12px;border-radius:14px;transform:translate(-50%,-100%);pointer-events:none;box-shadow:0 2px 6px #0006}
 #msg{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;background:#0007;font-size:22px;text-align:center}
 #msg h1{font-size:48px;margin:0 0 10px}
 #flash{position:fixed;top:30%;left:0;right:0;text-align:center;color:#ffe14a;font-size:34px;font-weight:900;text-shadow:0 3px 0 #a3261b,0 0 18px #000;pointer-events:none;opacity:0;transition:opacity .3s}
+#rot{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);background:#000a;color:#fff;font-weight:bold;padding:8px 14px;border-radius:99px;font-size:15px;pointer-events:none;z-index:5}
+#rot[hidden]{display:none}
 #bossbar{position:fixed;top:44px;left:50%;transform:translateX(-50%);width:400px;height:14px;background:#0006;border-radius:7px;display:none}
 #bossbar div{height:100%;background:#e33;border-radius:7px}
 </style></head><body>
-<div id="hud"></div><div id="flash"></div><div id="bossbar"><div></div></div><div id="cnt">1</div>
+<div id="rot" hidden>📱↻ 가로로 돌리면 더 넓게 보여요</div><div id="hud"></div><div id="flash"></div><div id="bossbar"><div></div></div><div id="cnt">1</div>
 <div id="msg"><h1>Math Army 3D</h1>A/D · ←/→ · 마우스 드래그로 좌우 이동 · M 음소거<br>왼쪽·가운데로 적이 아이템 방패를 들고 밀려옵니다. 방패를 깨서 아이템을 얻고 적을 쓰러뜨리세요!<br>오른쪽 차선의 파란 게이트는 쏘면 숫자가 올라가고, 통과하면 병사가 늘어나요<br><br><b>클릭하여 시작</b></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
@@ -47,7 +49,7 @@ document.body.appendChild(renderer.domElement);
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x87b8e8);scene.fog=new THREE.Fog(0xcfe4f2,45,115);
 const cam=new THREE.PerspectiveCamera(56,1,0.1,200);
 // fixed camera: the squad holds its ground, only enemies and gates come in
-function resize(){renderer.setSize(innerWidth,innerHeight);cam.aspect=innerWidth/innerHeight;const port=innerHeight>innerWidth;cam.fov=port?64:52;cam.position.set(0,port?22:14,port?17:13);cam.lookAt(0,0,port?-17:-15);cam.updateProjectionMatrix();}
+function resize(){renderer.setSize(innerWidth,innerHeight);cam.aspect=innerWidth/innerHeight;const port=innerHeight>innerWidth;cam.fov=port?64:48;cam.position.set(0,port?22:8.5,port?17:15);cam.lookAt(0,0,port?-17:-24);document.getElementById("rot").hidden=!(port&&matchMedia("(pointer:coarse)").matches);cam.updateProjectionMatrix();}
 addEventListener('resize',resize);resize();
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 { // gradient sky dome
@@ -180,10 +182,13 @@ function drawGate(o){const n=Math.floor(o.v);if(n===o.shown)return;o.shown=n;con
  x.fillStyle=n<0?'rgba(214,48,40,.85)':'rgba(42,157,244,.85)';x.fillRect(0,0,c.width,c.height);x.strokeStyle='#fff';x.lineWidth=8;x.strokeRect(4,4,c.width-8,c.height-8);
  x.fillStyle='#fff';x.font='900 84px sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText((n>0?'+':'')+n,c.width/2,c.height/2+4);t.needsUpdate=true;}
 function makeBarrel(lane,z,hp,rw){const g=new THREE.Group();
- const body=new THREE.Mesh(new THREE.CylinderGeometry(0.75,0.75,1.5,16),new THREE.MeshStandardMaterial({color:0x8a5a2e,roughness:.7}));body.position.y=.75;body.castShadow=true;g.add(body);
- [0.25,1.25].forEach(y=>{const r=new THREE.Mesh(new THREE.TorusGeometry(0.76,0.06,6,20),new THREE.MeshStandardMaterial({color:0x333333}));r.rotation.x=Math.PI/2;r.position.y=y;g.add(r);});
- const L=label(256,128),sp=new THREE.Sprite(new THREE.SpriteMaterial({map:L.t,depthTest:false}));sp.scale.set(2.6,1.3,1);sp.position.y=2.5;g.add(sp);
- g.position.set(LX[lane],0,z);scene.add(g);const o={type:"barrel",lane,x:LX[lane],z,hp,max:hp,rw,L,mesh:g,shown:null};drawBarrel(o);S.objs.push(o);return o;}
+ // a lane-wide rolling barrel: lies across the lane and rolls toward the squad
+ const roll=new THREE.Group();roll.position.y=.75;g.add(roll);const BL=LW-0.5;
+ const body=new THREE.Mesh(new THREE.CylinderGeometry(0.75,0.75,BL,20),new THREE.MeshStandardMaterial({color:0x8a5a2e,roughness:.7}));body.rotation.z=Math.PI/2;body.castShadow=true;roll.add(body);
+ for(let k=0;k<6;k++){const st=new THREE.Mesh(new THREE.BoxGeometry(BL+0.02,0.08,0.12),new THREE.MeshStandardMaterial({color:0x5a3818}));const a=k/6*Math.PI*2;st.position.set(0,Math.cos(a)*0.74,Math.sin(a)*0.74);st.rotation.x=a;roll.add(st);}
+ [-1,1].forEach(d=>{const r=new THREE.Mesh(new THREE.TorusGeometry(0.77,0.07,6,20),new THREE.MeshStandardMaterial({color:0x333333,metalness:.5}));r.rotation.y=Math.PI/2;r.position.x=d*(BL/2-0.25);roll.add(r);});
+ const L=label(256,128),sp=new THREE.Sprite(new THREE.SpriteMaterial({map:L.t,depthTest:false}));sp.scale.set(4.2,2.1,1);sp.position.y=2.9;g.add(sp);
+ g.position.set(LX[lane],0,z);scene.add(g);const o={type:"barrel",lane,x:LX[lane],z,hp,max:hp,rw,L,mesh:g,roll,shown:null};drawBarrel(o);S.objs.push(o);return o;}
 function drawBarrel(o){const n=Math.ceil(o.hp);if(n===o.shown)return;o.shown=n;const {c,x,t}=o.L;x.clearRect(0,0,c.width,c.height);
  x.fillStyle=o.rw.col;x.fillRect(8,6,240,60);x.fillStyle='#fff';x.font='bold 36px sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText(o.rw.txt,128,38);
  x.fillStyle='#000a';x.fillRect(20,80,216,32);x.fillStyle='#ff5040';x.fillRect(20,80,216*Math.max(0,o.hp/o.max),32);x.fillStyle='#fff';x.font='bold 26px sans-serif';x.fillText(n,128,97);t.needsUpdate=true;}
@@ -212,13 +217,16 @@ function spawnRow(){S.gatesN++;const z=-90,ez=-90-2.5*(90/S.speed),fp=firepower(
 function updateObjs(mv,R,dt){const lane=laneOf(S.px);
  for(const o of S.objs){if(o.dead)continue;o.z+=mv+(o.type=="barrel"?PUSH*dt:0);o.mesh.position.z=o.z;
   if(o.type=='gate'){drawGate(o);if(!o.done&&o.z>=0){o.done=1;o.mesh.material.opacity=.25;}}
-  else{drawBarrel(o);if(o.z>-R-0.75&&o.z<1&&o.lane==lane){const loss=Math.ceil(3+o.hp/o.max*S.count*0.35);S.count-=loss;SFX.hurt();flash('통에 깔림! -'+loss);removeObj(o);continue;}}
+  else{drawBarrel(o);o.roll.rotation.x+=(mv+PUSH*dt)/0.75;
+   if(o.z>-R-0.75&&o.z<1){ // every soldier standing in this lane gets flattened
+    const n=Math.min(S.count,MAXS);let inLane=0;for(let i=0;i<n;i++)if(laneOf(S.px+form[i][0])==o.lane)inLane++;
+    if(inLane){const loss=Math.min(S.count,Math.round(inLane*S.count/n));S.count-=loss;SFX.hurt();shake=0.4;burst(o.x,o.z,14,0.6);flash('통에 깔림! -'+loss);removeObj(o);continue;}}}
   if(o.z>10)removeObj(o);}
  S.objs=S.objs.filter(o=>!o.dead);}
 // bullets crossing an object's plane this frame hit it (front-most object in that lane first)
 function bulletHitsObj(b){const bl=laneOf(b.x),gain=(1.4+S.count*0.035)*S.rate/Math.max(1,Math.min(S.count,25));let best=null,bz=-1e9;
  for(const o of S.objs){if(o.dead||o.lane!=bl||o.done)continue;const face=o.type=='gate'?o.z:o.z+0.75;
-  if(b.pz>=face&&b.z<face&&(o.type=='gate'||Math.abs(b.x-o.x)<0.95)&&face>bz){best=o;bz=face;}}
+  if(b.pz>=face&&b.z<face&&face>bz){best=o;bz=face;}}
  if(!best)return false;
  if(best.type=='gate'){ // reinforcement gate: every volley that hits it adds +v soldiers right away
   S.addAcc=(S.addAcc||0)+best.v/Math.max(1,Math.min(S.count,25));while(S.addAcc>=1){S.addAcc-=1;S.count++;S.pulse=1;{const nw=performance.now();if(nw-(S.addSnd||0)>90){S.addSnd=nw;tone(1046,0.05,"square",0.05,200);}}}if(Math.random()<.15)burst(b.x,best.z+0.3,1,1.4);}else{best.hp-=b.d;if(best.hp<=0){burst(best.x,best.z,16,1);gainReward(best.rw);removeObj(best);}else if(Math.random()<.25)burst(b.x,best.z+0.8,1,1);}
@@ -243,7 +251,7 @@ function crowdR(){return 0.32*Math.sqrt(Math.min(S.count,MAXS));}
 const keys={};addEventListener('keydown',e=>keys[e.key.toLowerCase()]=1);addEventListener('keyup',e=>keys[e.key.toLowerCase()]=0);
 let drag=null;addEventListener('pointerdown',e=>{drag={x:e.clientX,p:S?S.tx:0};});addEventListener('pointerup',()=>drag=null);
 addEventListener('pointermove',e=>{if(drag&&running)S.tx=drag.p+(e.clientX-drag.x)/innerWidth*ROAD*3;});
-msg.onclick=()=>{initAudio();AC.resume();reset();running=true;msg.style.display='none';startBGM();};
+msg.onclick=()=>{initAudio();AC.resume();if(matchMedia('(pointer:coarse)').matches){try{const el=document.documentElement,fs=el.requestFullscreen||el.webkitRequestFullscreen;const p=fs&&fs.call(el);(p&&p.then?p:Promise.resolve()).then(()=>screen.orientation&&screen.orientation.lock&&screen.orientation.lock('landscape')).catch(()=>{});}catch(e){}}reset();running=true;msg.style.display='none';startBGM();};
 function end(win){running=false;SFX.over();try{parent.postMessage({type:"arcade-score",game:"run",score:Math.floor(S.dist),detail:"스테이지 "+S.stage},"*")}catch(e){}msg.style.display='flex';msg.innerHTML=`<h1>게임 오버</h1>${S.base<=0?'기지가 무너졌습니다<br>':'병사가 전멸했습니다<br>'}스테이지 ${S.stage} 도달<br><br><b>클릭하여 재시작</b>`;}
 
 let last=performance.now();
@@ -288,7 +296,7 @@ function update(dt){
   if(!b.dead&&S.boss&&Math.abs(b.z-S.boss.z)<1.2&&Math.abs(b.x)<1.6){S.boss.hp-=b.d;b.dead=1;SFX.bossHit();}}
  S.bullets=S.bullets.filter(b=>!b.dead);S.enemies=S.enemies.filter(e=>!e.dead);
  // boss
- if(S.boss){const B=S.boss;B.z=Math.min(-R-1.2,B.z+1*dt);boss.position.set(0,0,B.z);
+ if(S.boss){const B=S.boss;B.z=Math.min(-R-1.2,B.z+3*dt);boss.position.set(0,0,B.z);
   if(B.z>=-R-1.3){B.atk=(B.atk||0)+dt;if(B.atk>=1.2){B.atk=0.001;SFX.hurt();SFX.boss();S.count-=2+Math.floor(S.count*0.1);shake=0.6;burst(0,0.3,B.z+2.6,16);}}else B.atk=0;
   bb.firstChild.style.width=Math.max(0,B.hp/B.max*100)+'%';
   if(B.hp<=0){SFX.clear();S.boss=null;boss.visible=false;bb.style.display='none';S.stage++;S.stageStart=S.dist;S.nextGate=S.dist+10;S.nextEnemy=S.dist+40;S.nextMini=S.dist+S.stageLen*0.6;S.base=Math.min(100,S.base+30);flash("스테이지 클리어! 기지 +30");}}

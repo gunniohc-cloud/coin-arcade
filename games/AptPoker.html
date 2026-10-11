@@ -41,7 +41,7 @@ button:disabled{opacity:.3;cursor:default}
 </style></head><body>
 <div id="m">
  <div id="top"><div id="pay"><table id="pt"></table><div class="paytip">족보를 누르면 룰과 예시가 나와요</div></div>
-  <div id="ladder"><h3>🏢 더블 판돈 시세표</h3><div id="tiers"></div></div></div>
+  <div id="ladder"><h3>🏢 더블 시세표 <button id="allT" type="button">전체 ▸</button></h3><div id="tiers"></div></div></div>
  <div id="screen"><div id="msg">영끌 포커</div><div id="sub">전세금 3억으로 인생역전 도전!</div><div id="cards"></div></div>
  <div id="bar"><span>💰 자산 <b id="cr"></b></span><span>🎲 베팅 <b id="bt"></b></span></div>
  <div id="btns">
@@ -59,13 +59,16 @@ button:disabled{opacity:.3;cursor:default}
 const COIN=1000; // 1코인 = 1000만원
 function won(v){const neg=v<0;v=Math.abs(Math.round(v));const e=Math.floor(v/10000),m=v%10000;
  let s=(e?e.toLocaleString()+'억':'')+(m?(e?' ':'')+m.toLocaleString()+'만':'');return (neg?'-':'')+(s||'0')+'원';}
-// [가격(만원), 이름] — 2026년 시세 기반(일부 실거래 기사, 나머지 게임용 근사치)
+// [가격(만원), 이름] — 헬리오시티·아크로리버파크·원베일리는 2026년 실거래 기사 기준, 나머지는 게임용 근사치
 const TIERS=[
- [5000,'경북 영천 구축 주공 59㎡'],[15000,'청주 구축 브랜드 84㎡'],[30000,'대구 달서 e편한세상 84㎡'],
- [60000,'노원 상계주공 59㎡'],[90000,'인천 송도 더샵 84㎡'],[150000,'성남 분당 파크뷰 84㎡'],
- [230000,'마포 래미안푸르지오 84㎡'],[315000,'송파 헬리오시티 84㎡'],[630000,'반포 아크로리버파크 84㎡'],
- [720000,'반포 래미안 원베일리 84㎡'],[2000000,'한남 나인원한남 대형'],[3000000,'청담 에테르노청담 펜트'],
- [30000000,'반포 원베일리 단지 통째로']];
+ [3500,'전남 고흥 구축 59㎡'],[6000,'경북 영천 주공 59㎡'],[9000,'전북 익산 부영 84㎡'],[15000,'충북 청주 구축 브랜드 84㎡'],
+ [20000,'경남 창원 구축 84㎡'],[30000,'대구 달서 e편한세상 84㎡'],[40000,'광주 봉선 힐스테이트 84㎡'],[50000,'부산 사하 래미안 84㎡'],
+ [60000,'서울 노원 상계주공 59㎡'],[70000,'인천 청라 자이 84㎡'],[90000,'인천 송도 더샵 84㎡'],[110000,'수원 광교 힐스테이트 84㎡'],
+ [130000,'대구 수성 범어 SK뷰 84㎡'],[150000,'성남 분당 파크뷰 84㎡'],[170000,'부산 해운대 아이파크 84㎡'],[190000,'과천 래미안슈르 84㎡'],
+ [230000,'마포 래미안푸르지오 84㎡'],[260000,'성동 옥수 래미안 84㎡'],[285000,'잠실 엘스 84㎡'],[315000,'송파 헬리오시티 84㎡'],
+ [350000,'잠실 리센츠 84㎡'],[400000,'용산 이촌 한가람 84㎡'],[450000,'성수 트리마제 84㎡'],[630000,'반포 아크로리버파크 84㎡'],
+ [720000,'반포 래미안 원베일리 84㎡'],[1000000,'압구정 현대 대형'],[2000000,'한남 나인원한남 대형'],[3000000,'청담 에테르노청담 펜트'],
+ [10000000,'강남 재건축 단지 통째로'],[30000000,'반포 원베일리 단지 통째로']];
 function aptOf(v){let t=TIERS[0];for(const x of TIERS)if(v>=x[0])t=x;return t;}
 function aptText(v){if(v<TIERS[0][0])return '치킨 '+Math.max(1,Math.round(v/2))+'마리';const t=aptOf(v),n=v/t[0];return t[1]+' '+(n>=1.95?n.toFixed(1)+'채':'1채');}
 // ---------- sound ----------
@@ -94,7 +97,11 @@ function cardHTML(c,i,extra=''){if(!c)return `<div class="card back ${extra}" da
 function render(){
  $('pt').innerHTML=PAY.map((p,i)=>`<tr data-i="${i}" class="${phase=='result'&&lastRank==i&&win?'hit':''}"><td>${p[0]}</td>${[1,2,3,4,5].map(b=>`<td class="${b==bet?'cur':''}">${i==0&&b==5?4000:p[1]*b}</td>`).join('')}</tr>`).join('');
  const stake=phase=='double'||phase=='dblres'?dbl.stake:win;
- $('tiers').innerHTML=TIERS.slice().reverse().map(t=>{const on=stake>0&&aptOf(stake)==t,past=stake>=t[0];return `<div class="tier ${on?'on':past?'past':''}"><span>${t[1]}</span><span>${won(t[0])}</span></div>`;}).join('');
+ // show a window of tiers around the current stake (with the next double target above it)
+ const ci=stake>0?TIERS.indexOf(aptOf(stake)):-1,ni=stake>0?TIERS.indexOf(aptOf(stake*2)):-1,nW=matchMedia('(max-width:700px)').matches?5:7;
+ let lo=Math.max(0,Math.min(TIERS.length-nW,(ci<0?0:ci)-2));const win=TIERS.slice(lo,lo+nW);
+ $('tiers').innerHTML=win.slice().reverse().map(t=>{const i=TIERS.indexOf(t),on=i==ci,nx=i==ni&&ni!=ci,past=stake>=t[0];
+  return `<div class="tier ${on?'on':nx?'next':past?'past':''}"><span class="tn">${nx?'▲ ':''}${t[1]}</span><span class="tp">${won(t[0])}</span></div>`;}).join('');
  $('cr').textContent=won(credit);$('bt').textContent=bet+'코인 ('+won(bet*COIN)+')';
  if(phase=='double'||phase=='dblres'){$('cards').innerHTML=dbl.cards.map((c,i)=>i==0?cardHTML(c,i,'dealer'):(phase=='double'?cardHTML(null,i,'pick'):cardHTML(c,i,i==dbl.pick?'held':''))).join('');}
  else $('cards').innerHTML=[0,1,2,3,4].map(i=>cardHTML(hand[i],i,held[i]&&phase=='draw'?'held':'')).join('');
@@ -206,5 +213,54 @@ document.getElementById('pt').addEventListener('click',e=>{const tr=e.target.clo
 document.getElementById('ruleX').onclick=()=>document.getElementById('rule').hidden=true;
 document.getElementById('rule').addEventListener('click',e=>{if(e.target.id=='rule')e.currentTarget.hidden=true;});
 addEventListener('keydown',e=>{if(e.key=='Escape')document.getElementById('rule').hidden=true;},true);
+</script>
+<div id="aptAll" hidden><div id="aptBox"><button id="aptX" type="button" aria-label="닫기">✕</button><h2>🏢 전국 아파트 시세표</h2>
+ <p class="tip">더블에 성공할 때마다 판돈이 한 칸씩 올라갑니다. 헬리오시티·아크로리버파크·원베일리는 2026년 실거래 기사 기준, 나머지는 게임용 근사치예요.</p>
+ <ol id="aptList"></ol></div></div>
+<style>
+html,body{overscroll-behavior:none}
+#ladder h3{display:flex;justify-content:space-between;align-items:center;gap:4px}
+#allT{min-width:0;padding:2px 8px;font-size:11px;border-radius:99px;background:#7a5cff;color:#fff;border:0;box-shadow:none}
+.tier{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;align-items:center}
+.tier .tn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tier .tp{font-variant-numeric:tabular-nums;color:#ffd23f}
+.tier.on .tp{color:#000}
+.tier.next{outline:1px dashed #7affb0;color:#bfffcf}
+@media (max-width:700px){
+ #ladder{max-height:none!important}
+ .tier{grid-template-columns:1fr;gap:0;padding:2px 4px!important;line-height:1.2}
+ .tier span:last-child{display:block!important}
+ .tier .tn{font-size:10px}.tier .tp{font-size:10px;font-weight:bold}
+}
+#aptAll{position:fixed;inset:0;background:#000b;display:flex;align-items:center;justify-content:center;z-index:60;padding:16px}
+#aptAll[hidden]{display:none}
+#aptBox{position:relative;background:#120f2a;border:3px solid #7a5cff;border-radius:14px;padding:16px;max-width:460px;width:100%;max-height:85vh;overflow-y:auto;box-sizing:border-box}
+#aptBox h2{margin:0 0 6px;color:#c9b8ff;font-size:20px}
+#aptBox .tip{color:#9aa3e0;font-size:12px;margin:0 0 10px;line-height:1.5}
+#aptX{position:absolute;top:8px;right:8px;min-width:0;padding:4px 10px;background:#fff;color:#000;font-size:14px;box-shadow:none}
+#aptList{margin:0;padding:0;list-style:none;display:grid;gap:3px}
+#aptList li{display:grid;grid-template-columns:1.8em minmax(0,1fr) auto;gap:8px;padding:5px 8px;border-radius:6px;background:#1c1840;font-size:14px}
+#aptList li b{color:#ffd23f;font-variant-numeric:tabular-nums}#aptList li i{font-style:normal;color:#8f86b8}
+#aptList li.on{background:linear-gradient(90deg,#ffd23f,#ff8a3f);color:#000}#aptList li.on b,#aptList li.on i{color:#000}
+.ruleNav{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:10px}
+.ruleNav button{min-width:0;flex:1;padding:12px 0;font-size:18px;background:#ffd23f;color:#000;border:2px solid #000;border-radius:10px;box-shadow:0 3px 0 #000}
+.ruleNav span{color:#9aa3e0;font-size:13px;white-space:nowrap}
+</style>
+<script>
+// full price list
+function openAll(){const stake=(phase=='double'||phase=='dblres')?dbl.stake:win,cur=stake>0?aptOf(stake):null;
+ document.getElementById('aptList').innerHTML=TIERS.slice().reverse().map((t,i)=>`<li class="${t===cur?'on':''}"><i>${TIERS.length-i}</i><span>${t[1]}</span><b>${won(t[0])}</b></li>`).join('');
+ document.getElementById('aptAll').hidden=false;const on=document.querySelector('#aptList li.on');if(on)on.scrollIntoView({block:'center'});}
+document.getElementById('allT').onclick=e=>{e.stopPropagation();openAll();};
+document.getElementById('aptX').onclick=()=>document.getElementById('aptAll').hidden=true;
+document.getElementById('aptAll').addEventListener('click',e=>{if(e.target.id=='aptAll')e.currentTarget.hidden=true;});
+// rule popup: previous / next instead of precise tapping
+let curRule=0;const _show=showRule;showRule=function(i){curRule=(i+PAY.length)%PAY.length;_show(curRule);document.getElementById('ruleN').textContent=(curRule+1)+' / '+PAY.length;};
+{const nav=document.createElement('div');nav.className='ruleNav';nav.innerHTML='<button type="button" id="ruleL" aria-label="이전 족보">◀</button><span id="ruleN"></span><button type="button" id="ruleR" aria-label="다음 족보">▶</button>';
+ document.querySelector('#ruleBox .tip').replaceWith(nav);}
+document.getElementById('ruleL').onclick=()=>showRule(curRule-1);document.getElementById('ruleR').onclick=()=>showRule(curRule+1);
+addEventListener('keydown',e=>{if(document.getElementById('rule').hidden)return;if(e.key=='ArrowLeft'){showRule(curRule-1);e.stopImmediatePropagation();}if(e.key=='ArrowRight'){showRule(curRule+1);e.stopImmediatePropagation();}},true);
+{let sx=null;const box=document.getElementById('ruleBox');box.addEventListener('touchstart',e=>{sx=e.touches[0].clientX},{passive:true});
+ box.addEventListener('touchend',e=>{if(sx==null)return;const dx=e.changedTouches[0].clientX-sx;sx=null;if(Math.abs(dx)>50)showRule(curRule+(dx<0?1:-1));});}
 </script>
 </body></html>

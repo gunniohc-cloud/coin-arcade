@@ -99,8 +99,8 @@ function render(){
  const stake=phase=='double'||phase=='dblres'?dbl.stake:win;
  // show a window of tiers around the current stake (with the next double target above it)
  const ci=stake>0?TIERS.indexOf(aptOf(stake)):-1,ni=stake>0?TIERS.indexOf(aptOf(stake*2)):-1,nW=matchMedia('(max-width:700px)').matches?5:7;
- let lo=Math.max(0,Math.min(TIERS.length-nW,(ci<0?0:ci)-2));const win=TIERS.slice(lo,lo+nW);
- $('tiers').innerHTML=win.slice().reverse().map(t=>{const i=TIERS.indexOf(t),on=i==ci,nx=i==ni&&ni!=ci,past=stake>=t[0];
+ let lo=Math.max(0,Math.min(TIERS.length-nW,(ci<0?0:ci)-2));const wnd=TIERS.slice(lo,lo+nW);
+ $('tiers').innerHTML=wnd.slice().reverse().map(t=>{const i=TIERS.indexOf(t),on=i==ci,nx=i==ni&&ni!=ci,past=stake>=t[0];
   return `<div class="tier ${on?'on':nx?'next':past?'past':''}"><span class="tn">${nx?'▲ ':''}${t[1]}</span><span class="tp">${won(t[0])}</span></div>`;}).join('');
  $('cr').textContent=won(credit);$('bt').textContent=bet+'코인 ('+won(bet*COIN)+')';
  if(phase=='double'||phase=='dblres'){$('cards').innerHTML=dbl.cards.map((c,i)=>i==0?cardHTML(c,i,'dealer'):(phase=='double'?cardHTML(null,i,'pick'):cardHTML(c,i,i==dbl.pick?'held':''))).join('');}

@@ -141,7 +141,7 @@ function miniMesh(){let m=miniPool.find(o=>!o.visible);if(m){m.visible=true;retu
  const club=new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.25,1.6,8),new THREE.MeshStandardMaterial({color:0x6b4a2a}));club.position.set(1,1.4,0.2);club.rotation.z=-0.5;m.add(club);
  const bar=new THREE.Mesh(new THREE.PlaneGeometry(1.6,0.14),new THREE.MeshBasicMaterial({color:0xff3333}));bar.position.y=3.1;m.add(bar);m.userData.bar=bar;
  scene.add(m);miniPool.push(m);return m;}
-function spawnMini(){const vol=Math.max(1,Math.min(S.count,25)),dps=vol*S.dmg*Math.max(1,S.count/25)/S.rate,hp=40+S.stage*50+dps*5;S.enemies.push({x:(Math.random()*2-1)*(ROAD-1.5),z:-90,hp,max:hp,mini:1,mesh:miniMesh()});flash('⚠ 중간보스 출현!');}
+function spawnMini(){const vol=Math.max(1,Math.min(S.count,25)),dps=vol*S.dmg*Math.max(1,S.count/25)/S.rate,hp=30+S.stage*30+dps*3.5;S.enemies.push({x:(Math.random()*2-1)*(ROAD-1.5),z:-90,hp,max:hp,mini:1,mesh:miniMesh()});flash('⚠ 중간보스 출현!');}
 let flashT=0;function flash(t){const el=document.getElementById('flash');el.textContent=t;el.style.opacity=1;flashT=1.2;}
 // soldier formation offsets (spiral)
 const form=[];for(let i=0;i<MAXS;i++){const a=i*2.39996,r=0.32*Math.sqrt(i);form.push([Math.cos(a)*r,Math.sin(a)*r]);}
@@ -168,7 +168,7 @@ function update(dt){
  if(!S.boss&&inStage<S.stageLen){
   if(S.dist>S.nextGate){spawnEncounter();S.nextGate=S.dist+30+Math.random()*8;}
   if(S.dist>S.nextMini){spawnMini();S.nextMini=Infinity;S.nextGate=Math.max(S.nextGate,S.dist+45);}}
- if(!S.boss&&inStage>=S.stageLen+60&&!S.enemies.length){S.boss={z:-60,hp:150*S.stage*S.stage+100,max:0,t:0};S.boss.max=S.boss.hp;boss.visible=true;bb.style.display='block';SFX.boss();
+ if(!S.boss&&inStage>=S.stageLen+60&&!S.enemies.length){S.boss={z:-60,hp:(()=>{const v=Math.max(1,Math.min(S.count,25));return 80+S.stage*60+v*S.dmg*Math.max(1,S.count/25)/S.rate*7;})(),max:0,t:0};S.boss.max=S.boss.hp;boss.visible=true;bb.style.display='block';SFX.boss();
   S.gates.forEach(g=>scene.remove(g.mesh));S.gates=[];}
  // gates
  for(const g of S.gates){g.z+=mv;g.mesh.position.z=g.z;
@@ -185,14 +185,14 @@ function update(dt){
   if(!e.mini&&Math.abs(e.z)<R&&Math.abs(e.x-S.px)<R){e.dead=1;S.count--;SFX.hurt();}
   // enemy slipped past the army → penalty
   if(!e.dead&&e.z>R+0.5){e.dead=1;const p=e.mini?40:3;S.base=Math.max(0,S.base-p);SFX.hurt();flash(e.mini?'중간보스 돌파! 기지 -'+p:'적 돌파! 기지 -'+p);}}
- for(const e of S.enemies)if(e.mini&&!e.dead&&Math.abs(e.z)<R+0.8&&Math.abs(e.x-S.px)<R+0.8){e.t=(e.t||0)-dt;if(e.t<=0){e.t=0.1;S.count-=Math.ceil(S.stage*1.5);SFX.hurt();}e.z-=mv+2.5*dt-0.5*dt;}
+ for(const e of S.enemies)if(e.mini&&!e.dead&&Math.abs(e.z)<R+0.8&&Math.abs(e.x-S.px)<R+0.8){e.t=(e.t||0)-dt;if(e.t<=0){e.t=0.2;S.count-=1+Math.floor(S.count*0.04);SFX.hurt();}e.z-=mv+2.5*dt-0.5*dt;}
  for(const b of S.bullets){if(b.dead)continue;
   for(const e of S.enemies){const hr=e.mini?1:0.45;if(!e.dead&&Math.abs(e.z-b.z)<hr+0.05&&Math.abs(e.x-b.x)<hr){e.hp-=b.d;b.dead=1;if(e.hp<=0){e.dead=1;SFX.kill();}break;}}
   if(!b.dead&&S.boss&&Math.abs(b.z-S.boss.z)<1.2&&Math.abs(b.x)<1.6){S.boss.hp-=b.d;b.dead=1;SFX.bossHit();}}
  S.bullets=S.bullets.filter(b=>!b.dead);S.enemies=S.enemies.filter(e=>!e.dead);
  // boss
  if(S.boss){const B=S.boss;B.z=Math.min(-R-1.2,B.z+2*dt);boss.position.set(0,0,B.z);
-  if(B.z>=-R-1.3){B.t-=dt;if(B.t<=0){B.t=0.15;SFX.hurt();S.count-=Math.ceil(S.stage*1.5);}}
+  if(B.z>=-R-1.3){B.t-=dt;if(B.t<=0){B.t=0.2;SFX.hurt();S.count-=1+Math.floor(S.count*0.05);}}
   bb.firstChild.style.width=Math.max(0,B.hp/B.max*100)+'%';
   if(B.hp<=0){SFX.clear();S.boss=null;boss.visible=false;bb.style.display='none';S.stage++;S.stageStart=S.dist;S.nextGate=S.dist+10;S.nextEnemy=S.dist+40;S.nextMini=S.dist+S.stageLen*0.6;S.base=Math.min(100,S.base+30);flash("스테이지 클리어! 기지 +30");}}
  S.count=Math.min(S.count,99999);if(S.count<=0||S.base<=0){S.count=Math.max(0,S.count);end();}

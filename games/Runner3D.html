@@ -51,7 +51,7 @@ document.body.appendChild(renderer.domElement);
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x87b8e8);scene.fog=new THREE.Fog(0xcfe4f2,45,115);
 const cam=new THREE.PerspectiveCamera(56,1,0.1,200);
 // fixed camera: the squad holds its ground, only enemies and gates come in
-function resize(){renderer.setSize(innerWidth,innerHeight);cam.aspect=innerWidth/innerHeight;const port=innerHeight>innerWidth;cam.fov=port?64:50;cam.position.set(0,port?22:5.8,port?17:5.2);cam.lookAt(0,0,port?-17:-14);document.getElementById("rot").hidden=!port;cam.updateProjectionMatrix();}
+function resize(){renderer.setSize(innerWidth,innerHeight);cam.aspect=innerWidth/innerHeight;const port=innerHeight>innerWidth;cam.fov=port?64:52;cam.position.set(0,port?22:8,port?17:8.6);cam.lookAt(0,0,port?-17:-12);document.getElementById("rot").hidden=!port;cam.updateProjectionMatrix();}
 addEventListener('resize',resize);resize();
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 { // gradient sky dome

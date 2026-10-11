@@ -61,7 +61,7 @@ const SFX={
  // the ultimate's 'ding': a bright metallic ring with long decay, over a deep thump and a rushing whoosh
  /* catapult launch: wooden arm thunk, then an air whoosh that follows the stone; fire pots add a roaring, crackling blaze */
  fling:(dur,fire)=>{tone(80,.2,'triangle',.55,-35);noise(.1,.4,260,1.2);for(let i=0;i<4;i++){const k=i/3;noise(.34,.12+.08*Math.sin(k*Math.PI),380+k*350,0.8,dur*k*0.85,-160);}
-  if(fire){for(let i=0;i<Math.ceil(dur/0.35);i++)noise(.42,.28,300,0.6,i*0.35,-90);for(let i=0;i<14;i++)noise(.03+Math.random()*.03,.12+Math.random()*.1,1800+Math.random()*2500,2,Math.random()*dur);}}, /* boulder landing: hard stone crack plus scattering gravel; fire pots also burst into flame */
+  if(fire){for(let i=0;i<Math.ceil(dur/0.22);i++){noise(.3,.55,700,0.5,i*0.22,-250);noise(.3,.35,1400,0.6,i*0.22+.1,-500);}for(let i=0;i<24;i++)noise(.03+Math.random()*.03,.2+Math.random()*.15,1500+Math.random()*2000,2,Math.random()*dur);}}, /* boulder landing: hard stone crack plus scattering gravel; fire pots also burst into flame */
  rock:fire=>{tone(70,.38,'sine',.85,-30);tone(105,.24,'triangle',.55,-50);noise(.12,.8,700,1.1);noise(.25,.65,380,0.9,0,-150);
   for(let i=0;i<7;i++)noise(.05+Math.random()*.06,.17+Math.random()*.14,500+Math.random()*900,1.6,.04+Math.random()*.3);
   /* rumbling tail that echoes off: soft, low, fading repeats */
@@ -192,7 +192,7 @@ function catFire(u){let best=null,bs=-1;
  S.boulders.push({x:u.x,y:u.y,sx:u.x,sy:u.y,tx:best.x-lead,ty:best.y,t:0,dur:tr=='fire'?1.8:0.9,tr,lv,dmg,R:55+(tr=='rock'?lv*7:lv*4),pool:tr=='fire'?{dps:base*(0.2+0.14*lv),life:5+lv*1.2,R:45+lv*8}:null});u.atk=1;once('fling',120,()=>SFX.fling(tr=='fire'?1.8:0.9,tr=='fire'));return true;}
 function catUpdate(dt){
  for(const b of S.boulders){b.t+=dt;const k=Math.min(1,b.t/b.dur);b.x=b.sx+(b.tx-b.sx)*k;b.y=b.sy+(b.ty-b.sy)*k;b.h=Math.sin(k*Math.PI)*(90+b.lv*8);
-  if(b.tr=='fire'&&Math.random()<0.6)S.fx.push({x:b.x,y:b.y,vx:(Math.random()-.5)*30,vy:-20-Math.random()*30,t:.3,part:Math.random()<.5?'#ff8a20':'#ffd040'});
+  if(b.tr=='fire'&&Math.random()<0.6)S.fx.push({hgt:b.h,x:b.x,y:b.y,vx:(Math.random()-.5)*30,vy:-20-Math.random()*30,t:.3,part:Math.random()<.5?'#ff8a20':'#ffd040'});
   if(k>=1&&!b.done){b.done=1;once('rock',90,()=>SFX.rock(b.tr=='fire'));S.shake=Math.max(S.shake,b.tr=='rock'?4+b.lv*2:3);
    for(const e of [...S.enemies]){const d=Math.hypot(e.x-b.x,e.y-b.y);if(d<b.R)hit(e,b.dmg*(d<b.R*0.4?1:0.6));}
    if(b.pool)S.pools.push({x:b.x,y:b.y,R:b.pool.R,t:b.pool.life,life:b.pool.life,dps:b.pool.dps});
@@ -300,10 +300,10 @@ const mp=o=>{const [x,y]=P(o.x,o.y);return Object.assign(Object.create(o),{x,y})
 function draw(){
  g.save();if(S.shake>.5)g.translate((Math.random()-.5)*S.shake,(Math.random()-.5)*S.shake);
  g.drawImage(ground,0,0);if(!PORT){const tt=performance.now()/1000;g.fillStyle='#ffffffcc';[[0,40,1],[300,70,.8],[620,30,1.2]].forEach(([o,y,s])=>{const cx=((o+tt*8*s)%(W+200))-100;E(cx,y,40*s,13*s,'#ffffffcc');E(cx+24*s,y-8*s,26*s,14*s,'#ffffffcc');E(cx-22*s,y-4*s,20*s,10*s,'#ffffffcc');});}PORT?drawCastleP():drawCastle();
- const ents=[...S.units.map(u=>[u,drawUnit]),...S.enemies.map(e=>[e,drawEnemy]),...S.items.map(i=>[i,drawBombItem])].map(([o,f])=>[mp(o),f]).sort((a,b)=>a[0].y-b[0].y);
+ const ents=[...S.units.map(u=>[u,drawUnit]),...S.enemies.map(e=>[e,drawEnemy]),...S.items.map(i=>[i,drawBombItem])].map(([o,f])=>{const m=mp(o);if(o.stun>0){m.x+=(Math.random()-.5)*6;m.y+=(Math.random()-.5)*3;}return [m,f];}).sort((a,b)=>a[0].y-b[0].y);
  drawPools();ents.forEach(([o,f])=>f(o));S.shots.forEach(s=>{const o=mp(s);o.a=angP(s.a);drawArrow(o);});drawBoulders();
  g.textAlign='center';for(const f0 of S.fx){const f=mp(f0);g.globalAlpha=Math.min(1,f.t*2);
-  if(f.part){E(f.x,f.y,3,3,f.part);}
+  if(f.part){E(f.x,f.y-(f.hgt||0),3,3,f.part);}
   else if(f.r){const R=PORT?f.r*1.1:f.r,k=1-f.t/.6;g.beginPath();g.arc(f.x,f.y,R*(.4+k*.6),0,7);const rg=g.createRadialGradient(f.x,f.y,0,f.x,f.y,R);rg.addColorStop(0,'#fff6b0');rg.addColorStop(.5,'#ff8a1aaa');rg.addColorStop(1,'#ff3a0000');g.fillStyle=rg;g.fill();}
   else{g.font='bold 14px sans-serif';g.lineWidth=3;g.strokeStyle='#000';g.strokeText(f.txt,f.x,f.y-(.6-f.t)*30);g.fillStyle=f.col||'#fff';g.fillText(f.txt,f.x,f.y-(.6-f.t)*30);}}
  g.globalAlpha=1;g.restore();
@@ -423,7 +423,7 @@ function superUpdate(dt){if(S.paused)return;const W=SBW();
 function drawSuperShots(){const W=SBW(),T=performance.now()/1000;
  for(const e of S.enemies){if(!(e.stun>0))continue;const [ex,ey]=P(e.x,e.y);
   if(e.hitK>0){g.save();g.globalAlpha=Math.min(1,e.hitK/.35)*.75;g.fillStyle='#ffffff';g.beginPath();g.arc(ex,ey-e.r*.2,e.r*1.15,0,7);g.fill();g.globalAlpha*=.6;g.strokeStyle='#ffd040';g.lineWidth=4;g.beginPath();g.arc(ex,ey-e.r*.2,e.r*(1.2+(.35-e.hitK)*4),0,7);g.stroke();g.restore();}
-  for(let i=0;i<3;i++){const a=T*6+i*2.09,sx=ex+Math.cos(a)*e.r*.9,sy=ey-e.r*1.5+Math.sin(a)*e.r*.3;g.fillStyle='#ffe14a';g.font='bold '+Math.round(10+e.r*.25)+'px sans-serif';g.textAlign='center';g.fillText('★',sx,sy);}}
+  g.save();g.lineCap='round';for(let i=0;i<3;i++){if(Math.random()<.35)continue;const a=Math.random()*6.28;let px=ex+Math.cos(a)*e.r*.3,py=ey-e.r*.4+Math.sin(a)*e.r*.3;g.beginPath();g.moveTo(px,py);for(let s=0;s<4;s++){px+=Math.cos(a)*e.r*.3+(Math.random()-.5)*e.r*.6;py+=Math.sin(a)*e.r*.3+(Math.random()-.5)*e.r*.6;g.lineTo(px,py);}g.strokeStyle='#bfe6ff';g.lineWidth=3;g.globalAlpha=.5;g.stroke();g.strokeStyle='#ffffff';g.lineWidth=1.2;g.globalAlpha=.95;g.stroke();}g.restore();}
  for(const s of superShots){g.save();g.lineCap='round';
   // glowing trail
   for(let i=1;i<s.trail.length;i++){const a=s.trail[i-1],b=s.trail[i],k=1-b[2]/0.5;g.strokeStyle=`rgba(255,226,122,${0.35*k})`;g.lineWidth=W*2*k;g.beginPath();g.moveTo(a[0],a[1]);g.lineTo(b[0],b[1]);g.stroke();

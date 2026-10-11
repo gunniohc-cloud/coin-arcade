@@ -10,11 +10,17 @@ html,body{margin:0;height:100%;overflow:hidden;touch-action:none;-webkit-user-se
 #rot{position:fixed;inset:0;background:#14101f;color:#fff;font-weight:bold;font-size:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;line-height:1.6;z-index:50}
 #rot div{font-size:64px;animation:spin 1.6s ease-in-out infinite}@keyframes spin{0%,30%{transform:rotate(0)}60%,100%{transform:rotate(-90deg)}}
 canvas{touch-action:none;display:block}
+#pad{position:fixed;left:0;right:0;display:none;flex-wrap:wrap;gap:8px;justify-content:center;padding:0 12px;z-index:6}
+body.port #pad{display:flex}
+#pad button,#fsCorner{font:bold 24px "Malgun Gothic",sans-serif;background:#1a1208cc;color:#ffc93c;border:2px solid #ffc93c88;border-radius:14px;padding:14px 0;flex:1 1 26%;touch-action:manipulation}
+#pad #fsBtn{flex-basis:100%;font-size:17px;padding:12px 0}
+#fsCorner{position:fixed;left:8px;top:8px;font-size:16px;padding:6px 10px;z-index:6;opacity:.75}
+body.port #fsCorner,body.fs #fsCorner{display:none}
 #rot[hidden]{display:none}
 #bossbar{position:fixed;top:44px;left:50%;transform:translateX(-50%);width:400px;height:14px;background:#0006;border-radius:7px;display:none}
 #bossbar div{height:100%;background:#e33;border-radius:7px}
 </style></head><body>
-<div id="rot" hidden><div>📱↻</div>가로 화면 전용 게임이에요<br>휴대폰을 가로로 돌려주세요</div><div id="hud"></div><div id="flash"></div><div id="bossbar"><div></div></div><div id="cnt">1</div>
+<div id="rot" hidden><div>📱↻</div>가로 화면 전용 게임이에요<br>휴대폰을 가로로 돌려주세요</div><div id="hud"></div><div id="flash"></div><div id="bossbar"><div></div></div><div id="cnt">1</div><div id="pad"><button data-l="0" aria-label="왼쪽 차선">◀</button><button data-l="1" aria-label="가운데 차선">●</button><button data-l="2" aria-label="오른쪽 차선">▶</button><button id="fsBtn">⛶ 가로 전체화면으로 하기</button></div><button id="fsCorner" aria-label="전체화면">⛶ 전체화면</button>
 <div id="msg"><h1>Math Army 3D</h1>드래그 또는 화면 왼쪽·가운데·오른쪽 탭으로 차선 이동 · A/D · ←/→ · M 음소거<br>왼쪽·가운데로 적이 아이템 방패를 들고 밀려옵니다. 방패를 깨서 아이템을 얻고 적을 쓰러뜨리세요!<br>오른쪽 차선의 파란 게이트는 쏘면 숫자가 올라가고, 통과하면 병사가 늘어나요<br><br><b>클릭하여 시작</b></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
@@ -51,7 +57,16 @@ document.body.appendChild(renderer.domElement);
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x87b8e8);scene.fog=new THREE.Fog(0xcfe4f2,45,115);
 const cam=new THREE.PerspectiveCamera(56,1,0.1,200);
 // fixed camera: the squad holds its ground, only enemies and gates come in
-function resize(){const vw=Math.round((window.visualViewport||window).width||innerWidth),vh=Math.round((window.visualViewport||window).height||innerHeight);renderer.setSize(vw,vh);cam.aspect=vw/vh;const port=innerHeight>innerWidth;cam.fov=port?64:42;cam.position.set(0,port?22:10.5,port?17:14);cam.lookAt(0,0,port?-17:-7.5);document.getElementById("rot").hidden=!port;cam.updateProjectionMatrix();}
+// landscape: the 3D view fills the screen. portrait: a landscape-ratio strip spans the full width,
+// with the HUD above it and lane buttons + a fullscreen button below it
+const VIEW_RATIO=1.9;let PORT=false,viewTop=0,viewH=0;
+function resize(){const vw=Math.round((window.visualViewport||window).width||innerWidth),vh=Math.round((window.visualViewport||window).height||innerHeight);
+ PORT=vh>vw;const w=vw,h=PORT?Math.min(Math.round(vw/VIEW_RATIO),vh):vh;viewH=h;viewTop=PORT?Math.max(0,Math.round((vh-h)*0.45)):0;
+ renderer.setSize(w,h);const c=renderer.domElement;c.style.position='fixed';c.style.left='0';c.style.top=viewTop+'px';
+ cam.aspect=w/h;cam.fov=42;cam.position.set(0,10.5,14);cam.lookAt(0,0,-7.5);cam.updateProjectionMatrix();
+ document.body.classList.toggle('port',PORT);document.getElementById('rot').hidden=true;
+ const hud=document.getElementById('hud');hud.style.top=PORT?Math.max(8,viewTop-64)+'px':'10px';
+ const pad=document.getElementById('pad');pad.style.top=PORT?(viewTop+h+12)+'px':'';}
 addEventListener('resize',resize);resize();
 if(window.visualViewport)visualViewport.addEventListener("resize",resize);
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
@@ -254,18 +269,18 @@ function crowdR(){return 0.32*Math.sqrt(Math.min(S.count,MAXS));}
 const keys={};addEventListener('keydown',e=>keys[e.key.toLowerCase()]=1);addEventListener('keyup',e=>keys[e.key.toLowerCase()]=0);
 // steering: drag anywhere (mouse, pen or finger) or tap the left / middle / right of the screen to jump to that lane
 let drag=null;const SENS=()=>ROAD*2.2/Math.max(320,innerWidth);
-function dStart(x){if(!S)return;drag={x,p:S.tx,moved:false};}
+function dStart(x,t){if(!S||(t&&t.closest&&t.closest("#pad,#fsCorner")))return;drag={x,p:S.tx,moved:false};}
 function dMove(x){if(!drag||!running)return;if(Math.abs(x-drag.x)>8)drag.moved=true;S.tx=drag.p+(x-drag.x)*SENS();}
 function dEnd(x){if(drag&&!drag.moved&&running){const third=x<innerWidth/3?0:x<innerWidth*2/3?1:2;S.tx=LX[third];}drag=null;}
 let touchMode=false;
-addEventListener('touchstart',e=>{touchMode=true;dStart(e.touches[0].clientX);},{passive:true});
+addEventListener('touchstart',e=>{touchMode=true;dStart(e.touches[0].clientX,e.target);},{passive:true});
 addEventListener('touchmove',e=>{dMove(e.touches[0].clientX);if(e.cancelable)e.preventDefault();},{passive:false});
 addEventListener('touchend',e=>{dEnd(e.changedTouches[0].clientX);},{passive:true});
 addEventListener('touchcancel',()=>{drag=null;});
-addEventListener('pointerdown',e=>{if(e.pointerType=='touch'||touchMode)return;dStart(e.clientX);});
+addEventListener('pointerdown',e=>{if(e.pointerType=="touch"||touchMode)return;dStart(e.clientX,e.target);});
 addEventListener('pointermove',e=>{if(e.pointerType=='touch'||touchMode)return;dMove(e.clientX);});
 addEventListener('pointerup',e=>{if(e.pointerType=='touch'||touchMode)return;dEnd(e.clientX);});
-msg.onclick=()=>{initAudio();AC.resume();if(matchMedia('(pointer:coarse)').matches){try{const el=document.documentElement,fs=el.requestFullscreen||el.webkitRequestFullscreen;const p=fs&&fs.call(el);(p&&p.then?p:Promise.resolve()).then(()=>screen.orientation&&screen.orientation.lock&&screen.orientation.lock('landscape')).catch(()=>{});}catch(e){}}reset();running=true;msg.style.display='none';startBGM();};
+msg.onclick=()=>{initAudio();AC.resume();reset();running=true;msg.style.display='none';startBGM();};
 function end(win){running=false;SFX.over();try{parent.postMessage({type:"arcade-score",game:"run",score:Math.floor(S.dist),detail:"스테이지 "+S.stage},"*")}catch(e){}msg.style.display='flex';msg.innerHTML=`<h1>게임 오버</h1>${S.base<=0?'기지가 무너졌습니다<br>':'병사가 전멸했습니다<br>'}스테이지 ${S.stage} 도달<br><br><b>클릭하여 재시작</b>`;}
 
 let last=performance.now();
@@ -351,10 +366,15 @@ function render(){
   bulletM.count=k;bulletM.instanceMatrix.needsUpdate=true;
 
   const p=new THREE.Vector3(S.px,1.6+crowdR()*0.3,0).project(cam);
-  cntEl.style.left=(p.x+1)/2*innerWidth+'px';cntEl.style.top=(1-p.y)/2*innerHeight+'px';cntEl.textContent=S.count;S.pulse=Math.max(0,(S.pulse||0)-0.08);cntEl.style.transform=`translate(-50%,-100%) scale(${1+S.pulse*0.35})`;cntEl.style.background=S.pulse>0.3?"#3fdc7a":"#2f7cf6";
+  cntEl.style.left=(p.x+1)/2*innerWidth+'px';cntEl.style.top=(viewTop+(1-p.y)/2*viewH)+'px';cntEl.textContent=S.count;S.pulse=Math.max(0,(S.pulse||0)-0.08);cntEl.style.transform=`translate(-50%,-100%) scale(${1+S.pulse*0.35})`;cntEl.style.background=S.pulse>0.3?"#3fdc7a":"#2f7cf6";
   const prog=S.boss?'BOSS!':Math.min(100,Math.floor((S.dist-S.stageStart)/(S.stageLen+60)*100))+'%';
   hud.textContent=`🏠 기지 ${S.base}  ·  스테이지 ${S.stage}  ·  진행 ${prog}  ·  공격력 ${S.dmg.toFixed(1)}  ·  공속 ${(1/S.rate).toFixed(1)}/s`;}
  renderer.render(scene,cam);}
+// lane buttons + fullscreen (landscape lock where the browser allows it)
+document.querySelectorAll("#pad [data-l]").forEach(b=>b.addEventListener("pointerdown",e=>{e.preventDefault();if(S)S.tx=LX[+b.dataset.l];}));
+function goFS(){try{const el=document.documentElement,fs=el.requestFullscreen||el.webkitRequestFullscreen;const p=fs&&fs.call(el);(p&&p.then?p:Promise.resolve()).then(()=>screen.orientation&&screen.orientation.lock&&screen.orientation.lock("landscape")).catch(()=>{});}catch(e){}}
+document.getElementById("fsBtn").onclick=goFS;document.getElementById("fsCorner").onclick=goFS;
+document.addEventListener("fullscreenchange",()=>document.body.classList.toggle("fs",!!document.fullscreenElement));
 // commands from the arcade gear menu
 let menuPaused=false;addEventListener("message",e=>{const d=e.data;if(!d||d.type!=="arcade-cmd")return;
  if(d.cmd=="mute")muted=!!d.on;

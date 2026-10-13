@@ -77,6 +77,9 @@ function startBGM(){if(bgmT)return;let step=0;const bass=[110,110,147,147,131,13
  bgmT=setInterval(()=>{if(muted||!S||!S.started||S.over||S.paused)return;const b=bass[(step>>1)%8];if(step%2==0)tone(b,.22,'triangle',.11);
   const m=mel[step%16];if(m)tone(m,.14,'square',.028);if(step%4==0)noise(.05,.06,150,1);if(step%4==2)noise(.03,.04,3000,2);step++;},170);}
 // ---------- data ----------
+// balance knobs (tuned with a bot playing all 99 waves): grunt HP growth past wave 12, enemy damage growth,
+// boss HP growth per boss tier, giant-boss HP multiplier, soldier-upgrade cost growth
+const BAL={hp:0.05,dmg:0.06,bg:0.18,mega:2.2,su:0.08};
 const UNITS=[
  {key:'1',ic:'⚔️',name:'검사',cost:30,hp:60,dmg:8,range:24,spd:50,rate:.8,col:'#4f8fff',kind:'sword'},
  {key:'2',ic:'🗼',name:'타워',cost:90,hp:320,dmg:9,range:210,spd:0,rate:.85,col:'#8a8f9c',kind:'tower',ranged:1,fixed:1},
@@ -89,22 +92,22 @@ const UPS=[
  {key:'e',ic:'🏰',sh:'성벽',name:'성벽 강화',lv:'wall',max:99,cost:l=>50+l*40,apply:()=>{S.castleMax+=100;S.castle=Math.min(S.castleMax,S.castle+150)}},
  {key:'r',ic:'🏹',sh:'성벽궁수',name:'성벽 궁수 (최대 4)',lv:'warch',max:4,cost:l=>[300,700,1500,3000][l],apply:()=>{}},
  {key:'u',ic:'🏛️',sh:'건물',name:'건물 업그레이드 (타워·성벽)',lv:'bld',max:3,cost:l=>[2000,5000,12000][l],apply:()=>{S.units.forEach(u=>{if(u.kind=='tower'){u.dmg=u.base.dmg*S.uAtk*bDm();u.max=u.base.hp*S.uHp*bHm();u.hp=u.max;}});S.castleMax+=300;S.castle=Math.min(S.castleMax,S.castle+300);S.fx.push({x:CX+200,y:TOP+60,t:1.8,txt:'🏛️ 건물 Lv'+S.lv.bld,col:'#ffd27a'});SFX.horn();}},
- {key:'t',ic:'🗡️',sh:'병사공격',name:'병사 공격력',lv:'uatk',max:99,cost:l=>70+l*55,apply:()=>{S.uAtk+=.3;S.units.forEach(u=>u.dmg=u.base.dmg*S.uAtk*(u.kind=='tower'?bDm():1));promo();}},
- {key:'y',ic:'❤️',sh:'병사체력',name:'병사 체력',lv:'uhp',max:99,cost:l=>70+l*55,apply:()=>{S.uHp+=.6;S.units.forEach(u=>{const r=u.hp/u.max;u.max=u.base.hp*S.uHp*(u.kind=='sword'?swMul():u.kind=='tower'?bHm():1);u.hp=u.max*r;});promo();}}];
+ {key:'t',ic:'🗡️',sh:'병사공격',name:'병사 공격력',lv:'uatk',max:99,cost:l=>Math.round((70+l*55)*(1+l*BAL.su)),apply:()=>{S.uAtk+=.3;S.units.forEach(u=>u.dmg=u.base.dmg*S.uAtk*(u.kind=='tower'?bDm():1));promo();}},
+ {key:'y',ic:'❤️',sh:'병사체력',name:'병사 체력',lv:'uhp',max:99,cost:l=>Math.round((70+l*55)*(1+l*BAL.su)),apply:()=>{S.uHp+=.6;S.units.forEach(u=>{const r=u.hp/u.max;u.max=u.base.hp*S.uHp*(u.kind=='sword'?swMul():u.kind=='tower'?bHm():1);u.hp=u.max*r;});promo();}}];
 function reset(go){lastSWT=0;S={started:!!go,gold:90,wave:1,castle:300,castleMax:300,lordDmg:10,lordRate:1,lordT:0,arrows:1,tArch:1,uAtk:1,uHp:1,income:2,incT:0,
  units:[],enemies:[],shots:[],fx:[],boulders:[],pools:[],items:[],bombs:1,spawnLeft:0,spawnT:0,waveT:1,over:false,paused:false,kills:0,shake:0,t:0,
  lv:{dmg:0,rate:0,wall:0,warch:0,bld:0,uatk:0,uhp:0},lordAim:0,waveBonus:0};S.spawnLeft=8+S.wave*4;S.eliteAt=Math.ceil(S.spawnLeft/2);}
 function spawnEnemy(){const w=S.wave,bossN=Math.floor(w/5),boss=w%5==0&&(S.spawnLeft==1||(bossN>=2&&S.spawnLeft==S.eliteAt)||(bossN>=4&&S.spawnLeft==Math.ceil(S.eliteAt*1.6))),r=Math.random(); /* every 5th wave a boss; from wave 10 two, from wave 20 three */
- let e={x:W+20,y:TOP+Math.random()*(BOT-TOP),hp:(26+w*12+w*w*.35)*(1+Math.max(0,w-20)*0.07),spd:40+Math.random()*18,dmg:6+w*1.5,range:20,rate:1,t:0,kind:'grunt',r:13,gold:Math.round((4+(w>>1))*1.3),pend:0,walk:Math.random()*9};
+ let e={x:W+20,y:TOP+Math.random()*(BOT-TOP),hp:(26+w*12+w*w*.35)*(1+Math.max(0,w-20)*0.07)*(1+Math.max(0,w-12)*BAL.hp),spd:40+Math.random()*18,dmg:(6+w*1.5)*(1+w*BAL.dmg),range:20,rate:1,t:0,kind:'grunt',r:13,gold:Math.round((4+(w>>1))*1.3),pend:0,walk:Math.random()*9};
  if(r<.25&&w>2){e.hp*=.6;e.spd*=1.8;e.kind='runner';e.r=11;}
  else if(r<.4&&w>3){e.hp*=2.5;e.spd*=.6;e.kind='brute';e.r=18;e.gold*=2;}
  // elite mid-boss: one per wave (from wave 2), drops a bomb when killed
  if(!boss&&w>=2&&S.spawnLeft==S.eliteAt){e.hp*=7;e.spd=26;e.r=22;e.kind='elite';e.dmg*=2.5;e.gold*=6;}
- if(boss){const g=1+0.3*(bossN-1);e.hp=(26+w*12+w*w*.35)*18*g*g*(1+Math.max(0,w-20)*0.07);e.spd=22+bossN*1.5;e.r=Math.min(46,30+bossN*3);e.kind='boss';e.dmg*=4*g;e.gold=80*bossN;e.tier=bossN;if(w%10==0&&(S.megaN||0)<w/10){S.megaN=(S.megaN||0)+1;e.hp*=3;e.dmg*=1.6;e.r=Math.min(54,e.r+8);e.spd*=0.85;e.gold*=2;e.mega=1;}}
+ if(boss){const g=1+BAL.bg*(bossN-1);e.hp=bossHp(w);e.spd=22+bossN*1.5;e.r=Math.min(46,30+bossN*3);e.kind='boss';e.dmg*=4*g;e.gold=80*bossN;e.tier=bossN;if(w%10==0&&(S.megaN||0)<w/10){S.megaN=(S.megaN||0)+1;e.hp*=BAL.mega;e.dmg*=1.3;e.r=Math.min(54,e.r+8);e.spd*=0.85;e.gold*=2;e.mega=1;}}
  e.max=e.hp;S.enemies.push(e);}
 // a regular boss's HP at wave w (the giant boss of every 10th wave has 3x this); the ultimate takes 15% off a giant boss
-function bossHp(w){const g=1+0.3*(Math.max(1,Math.floor(w/5))-1);return (26+w*12+w*w*.35)*18*g*g*(1+Math.max(0,w-20)*0.07);}
-const superDmg=()=>Math.round(bossHp(S.wave)*3*0.15);
+function bossHp(w){const g=1+BAL.bg*(Math.max(1,Math.floor(w/5))-1);return (26+w*12+w*w*.35)*18*g*g*(1+Math.max(0,w-20)*0.07);}
+const superDmg=()=>Math.round(bossHp(S.wave)*BAL.mega*0.15);
 const alive=e=>e.hp>0;
 // nearest enemy that isn't already doomed by arrows in flight
 function pickTarget(x,y,range){let b=null,d=1e9;for(const e of S.enemies){if(e.hp-e.pend<=0)continue;const dd=Math.hypot(e.x-x,e.y-y);if(dd<d&&dd<range){d=dd;b=e}}return b;}
@@ -147,7 +150,7 @@ function update(dt){
   else if(e&&u.ranged)step(u.hx,e.y,u.spd*.6); // archers just shuffle sideways to line up
   else step(u.hx,u.hy,u.spd*2.2);
   u.x=Math.min(u.x,u.ranged?ARCH_LINE:MELEE_LINE);}
- for(const e of S.enemies){if(e.hitK>0)e.hitK-=dt;if(e.stun>0){e.stun-=dt;if(e.kx){const m=Math.min(e.kx,dt*260);e.x+=m;e.kx-=m;}continue;}e.t-=dt;e.walk+=dt*e.spd/6;const[u,d]=nearest(S.units,e.x,e.y);e.atk=Math.max(0,(e.atk||0)-dt*4);
+ for(const e of S.enemies){if(e.hitK>0)e.hitK-=dt;if(e.stun>0){e.stun-=dt;if(e.kx){const m=Math.min(e.kx,dt*260);e.x+=m;e.kx-=m;}continue;}e.t-=dt;e.walk+=dt*e.spd/6;const[u,d]=e.kind=='runner'?[null,1e9]:nearest(S.units,e.x,e.y); // runners dash past soldiers straight for the walle.atk=Math.max(0,(e.atk||0)-dt*4);
   if(u&&d<=e.range+e.r+8){if(e.t<=0){e.t=e.rate;e.atk=1;u.hp-=e.dmg;}}
   else if(e.x>CX+50+e.r){const sm=e.slowT>0?Math.max(.2,Math.pow(.5,e.slowN||1)):1;e.slowT=(e.slowT||0)-dt;e.x-=e.spd*sm*dt;if(u&&d<120)e.y+=Math.sign(u.y-e.y)*e.spd*sm*dt*.5;}
   else if(e.t<=0){e.t=e.rate;e.atk=1;S.castle-=e.dmg;S.shake=4;SFX.castle();}}

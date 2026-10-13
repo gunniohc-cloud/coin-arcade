@@ -79,7 +79,7 @@ function startBGM(){if(bgmT)return;let step=0;const bass=[110,110,147,147,131,13
 // ---------- data ----------
 // balance knobs (tuned with a bot playing all 99 waves): grunt HP growth past wave 12, enemy damage growth,
 // boss HP growth per boss tier, giant-boss HP multiplier, soldier-upgrade cost growth
-const BAL={hp:0.028,dmg:0.06,bg:0.18,mega:2.2,su:0.08,run:0.3,lc:1,gold:0.034,ult:20,bd:1.5};
+const BAL={hp:0.04,dmg:0.06,bg:0.18,mega:1.8,su:0.08,run:0.3,lc:1,gold:0.034,ult:20,bd:0.35};
 const MAXW=50; // last wave
 // lord damage grows faster than anything else (by Lv50 he out-damages any fully upgraded unit) but costs more
 const lordDmgAt=l=>Math.round(10*(1+l*0.4)*Math.pow(1.15,l));

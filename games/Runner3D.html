@@ -298,8 +298,8 @@ msg.onclick=()=>{initAudio();AC.resume();reset();running=true;msg.style.display=
 function end(win){running=false;SFX.over();try{parent.postMessage({type:"arcade-score",game:"run",score:Math.floor(S.dist),detail:"스테이지 "+S.stage},"*")}catch(e){}msg.style.display='flex';msg.innerHTML=`<h1>게임 오버</h1>${S.base<=0?'기지가 무너졌습니다<br>':'병사가 전멸했습니다<br>'}스테이지 ${S.stage} 도달<br><br><b>클릭하여 재시작</b>`;}
 
 let last=performance.now();
-let lastWH="";
-function tick(now){const wh=innerWidth+"x"+innerHeight+"/"+(window.visualViewport?visualViewport.width+"x"+visualViewport.height:"");if(wh!==lastWH){lastWH=wh;resize();} // catches rotation even when no resize event fires
+let lastWH="",FPS=60;
+function tick(now){if(FPS==30&&now-last<30){requestAnimationFrame(tick);return;} /* battery saver: every other frame */const wh=innerWidth+"x"+innerHeight+"/"+(window.visualViewport?visualViewport.width+"x"+visualViewport.height:"");if(wh!==lastWH){lastWH=wh;resize();} // catches rotation even when no resize event fires
 const dt=Math.min(0.05,(now-last)/1000);last=now;if(running&&document.getElementById("rot").hidden)update(dt);render();requestAnimationFrame(tick);}
 // aim assist: bullets converge on what is ahead in the squad's lane.
 // few targets -> focus fire on the nearest one; many -> spread over the closest few
@@ -512,6 +512,7 @@ function goFS(){ // in the arcade the parent page owns fullscreen; standalone th
 document.addEventListener("fullscreenchange",()=>document.body.classList.toggle("fs",!!document.fullscreenElement));
 // commands from the arcade gear menu
 let menuPaused=false;addEventListener("message",e=>{const d=e.data;if(!d||d.type!=="arcade-cmd")return;
+ if(d.cmd=="gfx"){FPS=d.fps==30?30:60;const pr={high:Math.min(2,devicePixelRatio||1),mid:Math.min(1.5,devicePixelRatio||1),low:1}[d.res]||Math.min(1.5,devicePixelRatio||1);if(renderer.getPixelRatio()!==pr){renderer.setPixelRatio(pr);lastWH="";}}
  if(d.cmd=="mute")muted=!!d.on;if(d.cmd=="flash")flash(d.text);if(d.cmd=="fs")document.body.classList.toggle("fs",!!d.on);
  if(d.cmd=="pause"&&running){running=false;menuPaused=true;}
  if(d.cmd=="resume"&&menuPaused){menuPaused=false;running=true;last=performance.now();}});

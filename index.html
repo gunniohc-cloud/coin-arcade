@@ -47,6 +47,7 @@ h1 span{color:var(--coin)}
 #menuBox h2{font-family:var(--display);font-weight:400;color:var(--coin);margin:0 0 4px;font-size:26px;text-align:center}
 #menuBox button{font-family:var(--body);font-size:16px;font-weight:700;border:2px solid var(--line);background:var(--bg);color:var(--fg);border-radius:10px;padding:12px;cursor:pointer;text-align:left}
 #menuBox button:hover,#menuBox button:focus-visible{border-color:var(--coin);outline:none}
+#menuBox .mSec{font-size:12px;letter-spacing:.12em;color:var(--coin);margin:6px 2px -2px;opacity:.85}
 #menuBox #mResume{background:var(--coin);color:#1a1200;border-color:var(--coin)}
 #now{display:none}
 #play{position:fixed}
@@ -104,12 +105,12 @@ iframe{flex:1;border:0;width:100%;background:#000}
  <ol class="board small" id="recBoard"></ol>
  <button type="button" id="recClose">닫기</button>
 </form></div>
-<div id="play" hidden><div id="bar"><button id="gear" aria-label="메뉴" title="메뉴">⚙</button></div><div id="menu" hidden><div id="menuBox"><h2>일시정지</h2><button id="mResume">▶ 게임 재개</button><button id="mMute">🔇 음소거</button><button id="mRestart">⟲ 처음부터 다시</button><button id="mHome">🏠 오락실로 (타이틀)</button></div></div><iframe id="frame" allow="autoplay; fullscreen" title="게임 화면"></iframe></div>
+<div id="play" hidden><div id="bar"><button id="gear" aria-label="메뉴" title="메뉴">⚙</button></div><div id="menu" hidden><div id="menuBox"><h2>일시정지</h2><button id="mResume">▶ 게임 재개</button><button id="mMute">🔇 음소거</button><div class="mSec">그래픽</div><button id="mFps">🎞 프레임: 60fps</button><button id="mRes">🖼 해상도: 보통</button><button id="mRestart">⟲ 처음부터 다시</button><button id="mHome">🏠 오락실로 (타이틀)</button></div></div><iframe id="frame" allow="autoplay; fullscreen" title="게임 화면"></iframe></div>
 
 <script src="firebase-config.js"></script>
 <script>
 // bumped on every deploy so phones don't keep an old cached game
-const BUILD='261014002359';
+const BUILD='261014002948';
 const GAMES=[
  {id:'poop',file:'games/PoopCatch.html',name:'냥똥 받기',desc:'뒤돌아 앉은 하얀 고양이가 뿌직 떨어뜨리는 똥을 손으로 받아내세요. 황금똥은 체력 회복.',tags:[['PC · 모바일','ok'],['마우스 · 터치 · A/D']],art:'poop'},
  {id:'poker',file:'games/AptPoker.html',name:'영끌 포커',desc:'원페어부터 이기는 전자 포커. 이기면 더블 판돈이 상계주공에서 원베일리까지 올라갑니다.',tags:[['PC · 모바일','ok'],['터치 · 키보드']],art:'poker'},
@@ -133,7 +134,14 @@ function cmdFlash(t){try{frame.contentWindow.postMessage({type:'arcade-cmd',cmd:
 let muteOn=false;try{muteOn=localStorage.getItem('arcade-mute')=='1'}catch(e){}
 const menu=document.getElementById('menu'),cmd=(c,extra)=>{try{frame.contentWindow.postMessage({type:'arcade-cmd',cmd:c,...extra},'*')}catch(e){}};
 function syncMute(){document.getElementById('mMute').textContent=muteOn?'🔈 소리 켜기':'🔇 음소거';cmd('mute',{on:muteOn});}
-frame.addEventListener('load',()=>setTimeout(syncMute,300));
+// graphics options, remembered on this device: 60/30 fps and resolution (high/mid/low); games that support them apply them live
+let gfx={fps:60,res:'mid'};try{Object.assign(gfx,JSON.parse(localStorage.getItem('arcade-gfx')||'{}'))}catch(e){}
+const RES_NAME={high:'높음',mid:'보통',low:'낮음'};
+function syncGfx(){document.getElementById('mFps').textContent='🎞 프레임: '+(gfx.fps==30?'30fps (절전)':'60fps');document.getElementById('mRes').textContent='🖼 해상도: '+RES_NAME[gfx.res];cmd('gfx',{fps:gfx.fps,res:gfx.res});}
+function saveGfx(){try{localStorage.setItem('arcade-gfx',JSON.stringify(gfx))}catch(e){}syncGfx();}
+document.getElementById('mFps').onclick=()=>{gfx.fps=gfx.fps==30?60:30;saveGfx();};
+document.getElementById('mRes').onclick=()=>{gfx.res={high:'mid',mid:'low',low:'high'}[gfx.res]||'mid';saveGfx();};
+frame.addEventListener('load',()=>setTimeout(()=>{syncMute();syncGfx();},300));syncGfx();
 function closeMenu(){menu.hidden=true;cmd('resume');frame.focus();}
 document.getElementById('gear').onclick=()=>{cmd('pause');syncMute();menu.hidden=false;document.getElementById('mResume').focus();};
 document.getElementById('mResume').onclick=closeMenu;

@@ -33,8 +33,9 @@ body.port{flex-direction:column!important}
 body.port #ui{width:100%!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;padding:4px 4px calc(4px + env(safe-area-inset-bottom,0px));gap:3px!important}
 body.port #ui .sep{display:none}
 body.port #ui{max-width:600px!important;align-self:center}
-body.port #ui button{grid-template-columns:1fr;justify-items:center;text-align:center;gap:0;padding:3px 1px!important;font-size:10px!important}
-body.port #ui button i{font-size:14px}body.port #ui button b{font-size:10px}
+body.port #ui button{grid-template-columns:1fr;justify-items:center;text-align:center;gap:0;padding:2px 1px!important;font-size:9px!important;line-height:1.05!important;white-space:nowrap;overflow:hidden}
+body.port #ui button i{font-size:12px}body.port #ui button b{font-size:9px}
+body.port #ui{grid-template-columns:repeat(6,minmax(0,1fr))!important}
 #ui button *{pointer-events:none}</style></head><body>
 <div id="stage"><canvas id="c" width="1000" height="480"></canvas></div>
 <div id="ui"></div>

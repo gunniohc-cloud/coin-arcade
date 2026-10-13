@@ -591,7 +591,7 @@ function drawBombUI(){const b=bombBtn(),n=S.bombs,t=performance.now()/1000;
 addEventListener('keydown',e=>{au();const k=e.key.toLowerCase();const u=UNITS.find(u=>u.key==k);if(u)summon(u);const p=UPS.find(p=>p.key==k);if(p)upgrade(p);if(k=='p')S.paused=!S.paused;});
 let last=performance.now(),frameN=0;
 // capped at ~60fps so 120Hz screens don't render twice as often
-function loop(n){if(n-last<15){requestAnimationFrame(loop);return;}const dt=Math.min(.05,(n-last)/1000);last=n;update(dt);draw();if((frameN=(frameN+1)%4)==0)btns.forEach(f=>f()); // button labels only need refreshing a few times a secondrequestAnimationFrame(loop);}
+function loop(n){if(n-last<15){requestAnimationFrame(loop);return;}const dt=Math.min(.05,(n-last)/1000);last=n;update(dt);draw();if((frameN=(frameN+1)%4)==0)btns.forEach(f=>f()); /* button labels only need refreshing a few times a second */requestAnimationFrame(loop);}
 function fit(){const st=document.getElementById("stage"),aw=st.clientWidth-4,ah=st.clientHeight-4,k=Math.min(aw/CW,ah/CH);cv.style.width=CW*k+"px";cv.style.height=CH*k+"px";}
 // commands from the arcade gear menu
 let menuPaused=false;addEventListener("message",e=>{const d=e.data;if(!d||d.type!=="arcade-cmd")return;

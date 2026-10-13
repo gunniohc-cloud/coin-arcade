@@ -87,7 +87,11 @@ const lordDmgAt=l=>Math.round(10*(1+l*0.4)*Math.pow(1.15,l));
 const UNITS=[
  {key:'1',ic:'⚔️',name:'검사',cost:30,hp:60,dmg:8,range:24,spd:50,rate:.8,col:'#4f8fff',kind:'sword'},
  {key:'2',ic:'🗼',name:'타워',cost:90,hp:320,dmg:9,range:210,spd:0,rate:.85,col:'#8a8f9c',kind:'tower',ranged:1,fixed:1},
- {key:'3',ic:'🪨',name:'투석기',cost:400,hp:200,dmg:22,range:470,spd:0,rate:4.2,col:'#8a5a2e',kind:'catapult',ranged:1,fixed:1,cat:1}];
+ {key:'3',ic:'🪨',name:'투석기',cost:400,hp:200,dmg:22,range:470,spd:0,rate:4.2,col:'#8a5a2e',kind:'catapult',ranged:1,fixed:1,cat:1},
+ {key:'4',ic:'🪵',name:'바리케이드',cost:60,hp:500,dmg:4,range:0,spd:0,rate:1,col:'#7a5230',kind:'barr',fixed:1,barr:1}];
+// barricade: sharpened-log wall that orcs must hack through; spikes hurt whoever hits it. Up to 20 upgrades each
+const barrCost=u=>Math.round(40+(u.bl||0)*35+(u.bl||0)**2*6);
+function barrApply(u){const k=1+0.8*(u.bl||0),r=u.hp/u.max;u.max=u.base.hp*k;u.hp=u.max*r;u.dmg=u.base.dmg*(1+0.5*(u.bl||0));}
 // building level (0-3): towers hit harder and get tougher, castle and towers change look
 // tower tiers: archers -> crossbowmen -> great crossbow (ballista) tower -> royal ballista tower
 const bDm=()=>[1,1.6,2.6,4][S.lv.bld||0],bHm=()=>[1,1.6,2.4,3.5][S.lv.bld||0];
@@ -146,6 +150,7 @@ function update(dt){
  // defensive AI: archers hold a line near the wall; melee only sally out to meet enemies inside the guard zone, then hurry home
  const ARCH_LINE=CX+70,MELEE_LINE=CX+420,ENGAGE=CX+450; // swordsmen can push out to the tower line
  for(const u of S.units){u.t-=dt;u.walk+=dt*8;u.atk=Math.max(0,u.atk-dt*4);
+  if(u.barr)continue;
   if(u.cat){u.atk=Math.max(0,(u.atk||0)-dt*2);if(u.t<=0&&catFire(u))u.t=u.rate;continue;}
   if(u.fixed){ // arrows leave from the archers on top of the tower (screen-space offset, so it is right in portrait too)
    const tz=50+(S.lv.bld||0)*6,[tsx,tsy]=P(u.x,u.y),[ox,oy]=unP(tsx,tsy-tz);let first=null;
@@ -160,7 +165,7 @@ function update(dt){
   else step(u.hx,u.hy,u.spd*2.2);
   u.x=Math.min(u.x,u.ranged?ARCH_LINE:MELEE_LINE);}
  for(const e of S.enemies){if(e.hitK>0)e.hitK-=dt;if(e.stun>0){e.stun-=dt;if(e.kx){const m=Math.min(e.kx,dt*260);e.x+=m;e.kx-=m;}continue;}e.t-=dt;e.walk+=dt*e.spd/6;const[u,d]=e.kind=='runner'?[null,1e9]:nearest(S.units,e.x,e.y); // runners dash past soldiers straight for the walle.atk=Math.max(0,(e.atk||0)-dt*4);
-  if(u&&d<=e.range+e.r+8){if(e.t<=0){e.t=e.rate;e.atk=1;u.hp-=e.dmg;}}
+  if(u&&d<=e.range+e.r+(u.barr?24:8)){if(e.t<=0){e.t=e.rate;e.atk=1;u.hp-=e.dmg;if(u.barr)hit(e,u.dmg);}}
   else if(e.x>CX+50+e.r){const sm=e.slowT>0?Math.max(.2,Math.pow(.5,e.slowN||1)):1;e.slowT=(e.slowT||0)-dt;e.x-=e.spd*sm*dt;if(u&&d<120)e.y+=Math.sign(u.y-e.y)*e.spd*sm*dt*.5;}
   else if(e.t<=0){e.t=e.rate;e.atk=1;S.castle-=e.dmg;S.shake=4;SFX.castle();}}
  for(const s of S.shots){
@@ -273,7 +278,16 @@ function drawTower(x,y,u,ghost){ // stone archer tower; y is its base. Building 
   if(T>=1){g.fillStyle='#5a3a1a';g.fillRect(-2,-1.5,10,3);g.strokeStyle='#3a2410';g.lineWidth=2;g.beginPath();g.moveTo(7,-6);g.lineTo(7,6);g.stroke();}
   else{g.strokeStyle='#6b3d1a';g.lineWidth=2;g.beginPath();g.arc(0,0,8,-1.3,1.3);g.stroke();}g.restore();
   g.fillStyle='#0008';g.fillRect(x-16,top-38,32,4);g.fillStyle='#5be36b';g.fillRect(x-16,top-38,32*u.hp/u.max,4);}}
-function drawUnit(u){if(u.cat){drawCatapult(u.x,u.y,u);return;}if(u.fixed){drawTower(u.x,u.y,u);return;}const bob=Math.abs(Math.sin(u.walk))*2,x=u.x+(u.face||1)*(u.atk||0)*8,y=u.y-bob,f=u.face||1;
+function drawBarricade(x,y,u,ghost){const lv=u?u.bl||0:0;
+ for(let i=-2;i<=2;i++){const lx=x+i*9,lean=i*.12,h=26+(i%2?-3:2);g.save();g.translate(lx,y);g.rotate(lean-.35);
+  g.fillStyle='#7a5230';g.fillRect(-3.5,-h,7,h+4);g.fillStyle='#9a7048';g.fillRect(-1.5,-h,2,h+4);
+  g.fillStyle=lv>=20?'#c8ccd6':lv>=10?'#8a8a92':'#c8a070';g.beginPath();g.moveTo(-3.5,-h);g.lineTo(0,-h-9);g.lineTo(3.5,-h);g.fill();g.restore();}
+ g.strokeStyle='#4a2e14';g.lineWidth=3;g.beginPath();g.moveTo(x-24,y-10);g.lineTo(x+24,y-10);g.stroke();
+ g.strokeStyle='#c8b080';g.lineWidth=1.5;for(const sx of [x-14,x+4]){g.beginPath();g.moveTo(sx,y-13);g.lineTo(sx+5,y-7);g.stroke();}
+ if(lv>=5){g.fillStyle='#6a6a70';for(let i=-2;i<=2;i++)g.fillRect(x+i*9-3,y-18,6,3);}
+ if(u){g.fillStyle='#0008';g.fillRect(x-18,y-46,36,4);g.fillStyle='#5be36b';g.fillRect(x-18,y-46,36*u.hp/u.max,4);
+  if(lv){g.fillStyle='#ffd27a';g.font='bold 10px sans-serif';g.textAlign='center';g.fillText('Lv'+lv,x,y+12);}}}
+function drawUnit(u){if(u.barr){drawBarricade(u.x,u.y,u);return;}if(u.cat){drawCatapult(u.x,u.y,u);return;}if(u.fixed){drawTower(u.x,u.y,u);return;}const bob=Math.abs(Math.sin(u.walk))*2,x=u.x+(u.face||1)*(u.atk||0)*8,y=u.y-bob,f=u.face||1;
  // swordsman gear grows every 10 upgrades: tunic+short sword -> leather+buckler -> chainmail+kite shield+longsword
  // -> plate+heater shield+spear -> knight in great helm, tabard, cape, greatsword -> golden champion
  const st=SWT();
@@ -447,7 +461,7 @@ UNITS.forEach(u=>{const b=document.createElement('button');ui.appendChild(b);
   b.addEventListener('pointercancel',()=>tdrag=null);}
  else b.onclick=()=>summon(u);
  btns.push(()=>{const sw=u.kind=='sword',c=sw?swCost():u.cost,n=unitN(u),mx=unitMax(u);{const h=`<i>${u.ic}</i><span>${u.name} ${n}/${mx}</span><b>${c}G</b>`;if(b._h!==h){b._h=h;b.innerHTML=h;}}b.disabled=(S.gold<c||S.over||n>=mx)&&!(tdrag&&tdrag.t==u);});});
-// field caps: 20 swordsmen, 10 towers, 15 catapults
+// field caps: 20 swordsmen, 10 towers, 15 catapults, 10 barricades
 function unitMax(t){return t.kind=='sword'?SW_MAX:t.cat?15:10;}
 function unitN(t){return S.units.filter(o=>o.key==t.key).length;}
 // ---------- tower: drag from its button onto the field in front of the wall ----------
@@ -459,7 +473,7 @@ function drawTowerDrag(){if(!tdrag)return;g.save();
  const c=[[TZ.x0,TOP+10],[TZ.x1,TOP+10],[TZ.x1,BOT],[TZ.x0,BOT]].map(([a,b])=>P(a,b));
  g.beginPath();c.forEach(([a,b],i)=>i?g.lineTo(a,b):g.moveTo(a,b));g.closePath();g.fillStyle='#ffd27a1f';g.fill();g.setLineDash([8,6]);g.strokeStyle='#ffd27a99';g.lineWidth=2;g.stroke();g.setLineDash([]);
  if(!tdrag.out){const R=tdrag.t.range*(PORT?(KX+KY)/2:1);g.beginPath();g.arc(tdrag.x,tdrag.y-30,R,0,7);g.fillStyle=tdrag.ok?'#5be36b18':'#ff404018';g.fill();g.strokeStyle=tdrag.ok?'#5be36b':'#ff5050';g.lineWidth=2;g.stroke();
-  g.globalAlpha=.75;(tdrag.t.cat?drawCatapult:drawTower)(tdrag.x,tdrag.y,null,true);g.globalAlpha=1;
+  g.globalAlpha=.75;(tdrag.t.barr?drawBarricade:tdrag.t.cat?drawCatapult:drawTower)(tdrag.x,tdrag.y,null,true);g.globalAlpha=1;
   g.fillStyle=tdrag.ok?'#fff':'#ff8080';g.font='bold 13px "Malgun Gothic"';g.textAlign='center';g.fillText(tdrag.ok?'놓으면 배치':'여기엔 배치 불가',tdrag.x,tdrag.y+22);}
  g.restore();}
 const h2=document.createElement('h4');h2.textContent='업그레이드';ui.appendChild(h2);{const s=document.createElement('div');s.className='sep';ui.appendChild(s);}
@@ -491,9 +505,10 @@ function towerTap(p){
   if(hitB.k=='sell'){const v=sellValue(u);S.gold+=v;S.units=S.units.filter(o=>o!==u);selTower=null;SFX.coin();S.fx.push({x:u.x,y:u.y-40,t:1,txt:'💰 +'+v+'G 판매',col:'#ffd27a'});for(let i=0;i<8;i++)S.fx.push({x:u.x,y:u.y-20,vx:(Math.random()-.5)*160,vy:-Math.random()*140,t:.5,part:'#8a7a6a'});return true;}
   if(hitB.k=='rep'){const c=repairCost(u);if(u.hp>=u.max)return true;if(S.gold<c){say('골드 부족','#ff8080');return true;}S.gold-=c;u.hp=u.max;SFX.pick();say('🔧 수리 완료','#7fe3ab');}
   else if(u.cat){const tr=hitB.k=='rock'?'rock':hitB.k=='fire'?'fire':null;if(!tr)return true;if(u.track&&u.track!==tr){say('다른 강화 트랙을 이미 선택','#ff8080');return true;}if((u.tl||0)>=4)return true;const c=catCost(u);if(S.gold<c){say('골드 부족','#ff8080');return true;}S.gold-=c;u.spent=(u.spent||u.cost)+c;u.track=tr;u.tl=(u.tl||0)+1;SFX.pick();say((tr=='rock'?'🪨 강철돌 Lv':'🔥 불항아리 Lv')+u.tl,'#ffd27a');}
+  else if(hitB.k=='bup'){if((u.bl||0)>=20)return true;const c=barrCost(u);if(S.gold<c){say('골드 부족','#ff8080');return true;}S.gold-=c;u.spent=(u.spent||u.cost)+c;u.bl=(u.bl||0)+1;barrApply(u);SFX.pick();say('🪵 바리케이드 Lv'+u.bl,'#ffd27a');}
   else if(hitB.k=='arch'){if((u.arch||1)>=4)return true;const c=archCost(u);if(S.gold<c){say('골드 부족','#ff8080');return true;}S.gold-=c;u.spent=(u.spent||u.cost)+c;u.arch=(u.arch||1)+1;SFX.pick();say('🏹 궁수 '+u.arch+'명','#ffd27a');}
   return true;}
- const t=S.units.filter(u=>u.fixed).filter(u=>{const [sx,sy]=P(u.x,u.y),hw=u.cat?27:19;return Math.abs(p.x-sx)<=hw&&p.y<=sy+(u.cat?13:6)&&p.y>=sy-(u.cat?50:60+(S.lv.bld||0)*6);}).sort((a,b)=>{const [ax,ay]=P(a.x,a.y),[bx,by]=P(b.x,b.y);return Math.hypot(p.x-ax,p.y-ay+25)-Math.hypot(p.x-bx,p.y-by+25);})[0];
+ const t=S.units.filter(u=>u.fixed).filter(u=>{const [sx,sy]=P(u.x,u.y),hw=u.cat?27:u.barr?28:19;if(u.barr)return Math.abs(p.x-sx)<=hw&&p.y<=sy+8&&p.y>=sy-36;return Math.abs(p.x-sx)<=hw&&p.y<=sy+(u.cat?13:6)&&p.y>=sy-(u.cat?50:60+(S.lv.bld||0)*6);}).sort((a,b)=>{const [ax,ay]=P(a.x,a.y),[bx,by]=P(b.x,b.y);return Math.hypot(p.x-ax,p.y-ay+25)-Math.hypot(p.x-bx,p.y-by+25);})[0];
  if(t){selTower=t===selTower?null:t;return true;}
  if(selTower){selTower=null;return true;}
  return false;}
@@ -507,6 +522,7 @@ function drawRepair(){tBtns=[];if(!selTower)return;if(!S.units.includes(selTower
  if(u.cat){const lv=u.tl||0,cc=lv<4?catCost(u):0,tr=u.track;
   btn('rock',1,tr=='fire'?'🪨 —':lv>=4&&tr=='rock'?'🪨 MAX':`🪨 강돌${tr=='rock'?lv+1:1} ${cc}G`,tr!=='fire'&&lv<4&&S.gold>=cc);
   btn('fire',2,tr=='rock'?'🔥 —':lv>=4&&tr=='fire'?'🔥 MAX':`🔥 불돌${tr=='fire'?lv+1:1} ${cc}G`,tr!=='rock'&&lv<4&&S.gold>=cc);}
+ else if(u.barr){const bl=u.bl||0,bc=barrCost(u);btn('bup',1,bl>=20?'🪵 Lv20 MAX':`🪵 강화${bl+1} ${bc}G`,bl<20&&S.gold>=bc);}
  else btn('arch',1,a>=4?'🏹 궁수 4 MAX':`🏹 궁수+1 ${ac}G`,a<4&&S.gold>=ac);
  btn('sell',n-1,`💰 판매 +${sellValue(u)}`,true);
  g.textBaseline='alphabetic';g.fillStyle='#0008';g.fillRect(bx,by+h+4,tw,5);g.fillStyle='#5be36b';g.fillRect(bx,by+h+4,tw*u.hp/u.max,5);

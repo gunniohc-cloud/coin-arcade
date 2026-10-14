@@ -82,7 +82,7 @@ function startBGM(){if(bgmT)return;let step=0;const bass=[110,110,147,147,131,13
 // balance knobs (tuned with a bot playing all 99 waves): grunt HP growth past wave 12, enemy damage growth,
 // boss HP growth per boss tier, giant-boss HP multiplier, soldier-upgrade cost growth
 // e: early-wave (1-9) HP factor; a/b: extra HP growth per wave past 20 / past 30; lg/lr: lord damage / attack-speed growth; cd: share of enemy damage the castle takes
-const BAL={hp:0.04,dmg:0.06,bg:0.18,mega:1.8,su:0.08,run:0.3,lc:1,gold:0.034,ult:20,bd:0.35,e:1,a:0,b:0,lg:1.15,lr:0.18,cd:1};
+const BAL={hp:0.04,dmg:0.06,bg:0.18,mega:1.8,su:0.08,run:0.3,lc:1,gold:0.034,ult:20,bd:0.35,e:0.85,a:0.018,b:0.025,lg:1.143,lr:0.17,cd:0.25};
 const waveHpK=w=>(w<10?BAL.e:1)*(1+Math.max(0,w-20)*BAL.a+Math.max(0,w-30)*BAL.b);
 const MAXW=50; // last wave
 // lord damage grows faster than anything else (by Lv50 he out-damages any fully upgraded unit) but costs more

@@ -86,7 +86,9 @@ const SFX={
   /* rumbling tail that echoes off: soft, low, fading repeats */
   [[.12,.3],[.26,.2],[.42,.13],[.6,.07]].forEach(([dl,v])=>{noise(.45,v,260,0.7,dl,-120);tone(62,.4,'sine',v*1.2,-15,dl);});
   if(fire){noise(.45,.55,450,0.7,0,-250);noise(.45,.3,320,0.6,.3,-100);noise(.45,.2,320,0.6,.6,-100);for(let i=0;i<8;i++)noise(.04,.12,900+Math.random()*900,1.8,.05+Math.random()*.5);}}, /* ultimate: a huge, dark cinematic hit - deep bell partials + a low brass 'braaam' swell, sent through a long (~6s) reverb tail */
- ding:()=>{withRev(()=>{const f0=98;[[1,.5,5.5],[2.0,.2,4.2],[2.76,.12,3.4],[0.5,.38,6]].forEach(([m,v,d])=>tone(f0*m,d,'sine',v));tone(f0*1.006,5,'sine',.22);
+ /* drawing the great bow: a taut low string plucked (beats 1-2-3 of the rhythm draw) */
+ pluck:i=>withRev(()=>{const f=[110,110,110][i]||110;tone(f,.45,'triangle',.32,-3);tone(f*2,.25,'sine',.12,-6);tone(f*3.01,.12,'sine',.05);}),
+ ding:(perfect)=>{if(perfect)withRev(()=>{tone(392,3,'sine',.12);tone(587,2.4,'sine',.07);});withRev(()=>{const f0=98;[[1,.5,5.5],[2.0,.2,4.2],[2.76,.12,3.4],[0.5,.38,6]].forEach(([m,v,d])=>tone(f0*m,d,'sine',v));tone(f0*1.006,5,'sine',.22);
   braam(49,.5,3.2);braam(73.5,.3,2.8);tone(36,1.4,'sine',.75,-10);noise(.6,.12,500,.8,0,-350);});},
  coin:()=>tone(1300,.07,'triangle',.12),
  pick:()=>{tone(700,.08,'square',.1,500);tone(1050,.08,'square',.06,0,.06);},
@@ -591,7 +593,7 @@ cv.addEventListener('pointerdown',ev=>{const wasStarted=S.started;au();
  if(enemyTap(p))return;
  if(towerTap(p))return;
  if(overBtn(p)){if(S.bombs<=0){const b=bombBtn();S.fx.push({...wrld(b.x,b.y-40),t:.8,txt:'폭탄 없음',col:'#ff8080'});return;}
-  drag={x:p.x,y:p.y,out:false,cancel:true};try{cv.setPointerCapture(ev.pointerId)}catch(e){}ev.preventDefault();}});
+  drag={x:p.x,y:p.y,out:false,cancel:true,t0:performance.now()/1000,beat:-1};try{cv.setPointerCapture(ev.pointerId)}catch(e){}ev.preventDefault();}});
 cv.addEventListener('pointermove',ev=>{if(!drag)return;const p=evPos(ev);drag.x=p.x;drag.y=p.y;drag.out=p.out;drag.cancel=p.out||overBtn(p);});
 // ---------- ultimate: the lord's giant arrow. Drag from the button to aim, release to fire a huge piercing shot
 // in a straight line; it damages everything along a wide path. One charge per cleared wave. ----------
@@ -600,7 +602,15 @@ let superShots=[];
 function endDrag(ev,forceCancel){if(!drag)return;const d=drag;drag=null;try{cv.releasePointerCapture(ev.pointerId)}catch(e){}
  if(forceCancel||d.cancel||S.over||S.paused)return;
  const [lx,ly]=P(...lordPos());let dx=d.x-lx,dy=d.y-ly;const L=Math.hypot(dx,dy)||1;dx/=L;dy/=L;
- S.bombs--;superShots.push({x:lx,y:ly,dx,dy,t:0,hit:new Set(),trail:[],dmg:superDmg()});SFX.ding();S.shake=Math.max(S.shake,8);}
+ const q=beatQuality(d),mul=q=='PERFECT'?2:q=='GOOD'?1.3:0.7;
+ S.bombs--;superShots.push({x:lx,y:ly,dx,dy,t:0,hit:new Set(),trail:[],dmg:Math.round(superDmg()*mul)});SFX.ding(q=='PERFECT');S.shake=Math.max(S.shake,q=='PERFECT'?12:8);
+ S.fx.push({...wrld(lx+dx*90,ly+dy*90-20),t:1.1,txt:q=='PERFECT'?'✨ PERFECT! ×2':q=='GOOD'?'GOOD ×1.3':'박자 놓침 ×0.7',col:q=='PERFECT'?'#fff27a':q=='GOOD'?'#a8f0ff':'#ff9a9a'});}
+// rhythm draw: while aiming, the string is plucked on beats 1-2-3; letting go right on beat 4 (the 'ding') hits hardest.
+// The four-beat cycle repeats for as long as the player keeps holding.
+const BEAT=0.5;
+function beatQuality(d){const ph=(performance.now()/1000-d.t0)/BEAT,k=Math.round((ph-3)/4),off=Math.abs(ph-(3+4*Math.max(0,k)))*BEAT;
+ if(ph<2.5)return 'MISS';return off<0.09?'PERFECT':off<0.2?'GOOD':'MISS';}
+function beatTick(){if(!drag||drag.cancel)return;const ph=(performance.now()/1000-drag.t0)/BEAT,b=Math.floor(ph);if(b!==drag.beat){drag.beat=b;if(b%4<3)SFX.pluck(b%4);}}
 cv.addEventListener('pointerup',ev=>endDrag(ev,false));
 cv.addEventListener('pointercancel',ev=>endDrag(ev,true));
 function wrld(sx,sy){const [x,y]=unP(sx,sy);return {x,y};}
@@ -625,7 +635,12 @@ function drawSuperShots(){const W=SBW(),T=performance.now()/1000;
    g.fillStyle='#ffffff';g.beginPath();g.moveTo(26,0);g.lineTo(4,-8);g.lineTo(8,0);g.lineTo(4,8);g.closePath();g.fill();
    g.fillStyle='#ff9a20';[[-92,-14],[-92,4]].forEach(([fx,fy])=>{g.beginPath();g.moveTo(fx,fy);g.lineTo(fx+22,fy+5);g.lineTo(fx+22,fy+5+5);g.lineTo(fx,fy+10);g.fill();});}
   g.restore();}}
-function drawBombUI(){const b=bombBtn(),n=S.bombs,t=performance.now()/1000;
+function drawBombUI(){const b=bombBtn(),n=S.bombs,t=performance.now()/1000;beatTick();
+ if(drag&&!drag.cancel&&!drag.out){const ph=(t-drag.t0)/BEAT,c=((ph%4)+4)%4,bx=CW/2,by=86; // beat meter: three pluck dots and the target ring
+  g.save();g.fillStyle='#1a1208cc';g.beginPath();g.roundRect?g.roundRect(bx-92,by-18,184,36,12):g.rect(bx-92,by-18,184,36);g.fill();
+  for(let i=0;i<4;i++){const x=bx-66+i*44,on=c>=i&&c<i+1,done=c>=i+1;g.beginPath();g.arc(x,by,i==3?11:7,0,7);g.fillStyle=i==3?(on?'#fff27a':'#5a4a20'):(done||on?'#ffd27a':'#4a3a20');g.fill();
+   if(i==3){g.strokeStyle='#fff27a';g.lineWidth=2;const rr=11+Math.max(0,3-c)*14;if(c<3.6){g.globalAlpha=Math.min(1,.3+c/3);g.beginPath();g.arc(x,by,rr,0,7);g.stroke();g.globalAlpha=1;}}}
+  g.fillStyle='#fbeed3';g.font='bold 10px "Malgun Gothic"';g.textAlign='center';g.fillText('팅·팅·팅 → 딩! 에 놓기',bx,by+30);g.restore();}
  g.save();g.globalAlpha=n?1:.45;
  g.beginPath();g.arc(b.x,b.y,b.r,0,7);g.fillStyle='#1a1208dd';g.fill();g.lineWidth=3;g.strokeStyle=drag?'#fff6c0':'#ffd27a';g.stroke();
  if(n&&!drag){g.globalAlpha=.25+Math.sin(t*4)*.15;g.beginPath();g.arc(b.x,b.y,b.r+5,0,7);g.strokeStyle='#ffe27a';g.lineWidth=3;g.stroke();g.globalAlpha=n?1:.45;}

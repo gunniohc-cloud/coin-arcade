@@ -126,6 +126,8 @@ function bossHp(w){const g=1+BAL.bg*(Math.max(1,Math.floor(w/5))-1);return (26+w
 // ultimate scales with the lord's attack; keeping the lord upgraded roughly in step with the waves makes it take ~15% off a giant boss
 const superDmg=()=>Math.round(S.lordDmg*BAL.ult);
 const alive=e=>e.hp>0;
+// leaderboard score: higher wave first, then faster time (wave*10000 + 9999-seconds)
+const defScore=(w,t)=>w*10000+Math.max(1,9999-Math.min(9999,Math.round(t)));
 const fmtT=s=>{s=Math.floor(s);const h=Math.floor(s/3600),m=Math.floor(s/60)%60,ss=s%60;return (h?h+':':'')+String(m).padStart(h?2:1,'0')+':'+String(ss).padStart(2,'0');};
 // nearest enemy that isn't already doomed by arrows in flight
 function pickTarget(x,y,range){let b=null,d=1e9;for(const e of S.enemies){if(e.hp-e.pend<=0)continue;const dd=Math.hypot(e.x-x,e.y-y);if(dd<d&&dd<range){d=dd;b=e}}return b;}
@@ -146,7 +148,7 @@ function update(dt){
  S.incT+=dt;if(S.incT>=1){S.incT=0;S.gold+=S.income;}
  if(S.spawnLeft>0){S.spawnT-=dt;if(S.spawnT<=0){spawnEnemy();S.spawnLeft--;S.spawnT=Math.max(.25,1.1-S.wave*.06);}}
  else if(!S.enemies.length){if(!S.waveBonus){S.waveBonus=1;
-   if(S.wave>=MAXW){S.over=true;S.won=true;SFX.win();try{parent.postMessage({type:"arcade-score",game:"def",score:100000-Math.round(S.t),detail:"클리어 "+fmtT(S.t)+" · 처치 "+S.kills},"*")}catch(e){}return;}}
+   if(S.wave>=MAXW){S.over=true;S.won=true;SFX.win();try{parent.postMessage({type:"arcade-score",game:"def",score:defScore(MAXW,S.t),detail:"클리어 · 처치 "+S.kills},"*")}catch(e){}return;}}
   S.waveT-=dt;if(S.waveT<=0){S.waveBonus=0;S.wave++;SFX.horn();{const bonus=40+S.wave*12;S.gold+=bonus;const [bx,by]=PORT?unP(PW/2,PH/2-20):[W/2,TOP+100];S.fx.push({x:bx,y:by,t:1.4,txt:'💰 웨이브 보너스 +'+bonus+'G',col:'#ffd27a'});}S.waveT=1;S.megaN=0;S.spawnLeft=8+S.wave*4;S.eliteAt=Math.ceil(S.spawnLeft/2);}}
  S.lordT-=dt;if(S.lordT<=0&&fireLord())S.lordT=S.lordRate;
  // archers standing on the castle wall
@@ -184,7 +186,7 @@ function update(dt){
  S.shots=S.shots.filter(s=>!s.dead);catUpdate(dt);S.enemies=S.enemies.filter(e=>!e.dead);S.units=S.units.filter(u=>u.hp>0);
  for(const e of S.enemies)e.hitT=Math.max(0,(e.hitT||0)-dt);for(const it of S.items){it.t-=dt;it.bob+=dt*5;}S.items=S.items.filter(i=>i.t>0);
  for(const f of S.fx){f.t-=dt;if(f.part){f.x+=f.vx*dt;f.y+=f.vy*dt;f.vy+=400*dt;}}S.fx=S.fx.filter(f=>f.t>0);if(S.fx.length>260)S.fx.splice(0,S.fx.length-260); // particle cap for busy late waves
- S.shake*=.85;if(S.castle<=0&&!S.over){S.castle=0;S.over=true;SFX.over();try{parent.postMessage({type:"arcade-score",game:"def",score:(S.wave-1)*100+S.kills,detail:"웨이브 "+S.wave+" · 처치 "+S.kills},"*")}catch(e){}}}
+ S.shake*=.85;if(S.castle<=0&&!S.over){S.castle=0;S.over=true;SFX.over();try{parent.postMessage({type:"arcade-score",game:"def",score:defScore(S.wave,S.t),detail:"처치 "+S.kills},"*")}catch(e){}}}
 // ---------- drawing ----------
 const E=(x,y,rx,ry,f)=>{g.beginPath();g.ellipse(x,y,rx,ry,0,0,7);g.fillStyle=f;g.fill();};
 let ground=null;function makeGround(){const c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');

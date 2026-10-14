@@ -81,10 +81,12 @@ function startBGM(){if(bgmT)return;let step=0;const bass=[110,110,147,147,131,13
 // ---------- data ----------
 // balance knobs (tuned with a bot playing all 99 waves): grunt HP growth past wave 12, enemy damage growth,
 // boss HP growth per boss tier, giant-boss HP multiplier, soldier-upgrade cost growth
-const BAL={hp:0.04,dmg:0.06,bg:0.18,mega:1.8,su:0.08,run:0.3,lc:1,gold:0.034,ult:20,bd:0.35};
+// e: early-wave (1-9) HP factor; a/b: extra HP growth per wave past 20 / past 30; lg/lr: lord damage / attack-speed growth; cd: share of enemy damage the castle takes
+const BAL={hp:0.04,dmg:0.06,bg:0.18,mega:1.8,su:0.08,run:0.3,lc:1,gold:0.034,ult:20,bd:0.35,e:1,a:0,b:0,lg:1.15,lr:0.18,cd:1};
+const waveHpK=w=>(w<10?BAL.e:1)*(1+Math.max(0,w-20)*BAL.a+Math.max(0,w-30)*BAL.b);
 const MAXW=50; // last wave
 // lord damage grows faster than anything else (by Lv50 he out-damages any fully upgraded unit) but costs more
-const lordDmgAt=l=>Math.round(10*(1+l*0.4)*Math.pow(1.15,l));
+const lordDmgAt=l=>Math.round(10*(1+l*0.4)*Math.pow(BAL.lg,l));
 const UNITS=[
  {key:'1',ic:'⚔️',name:'검사',cost:30,hp:60,dmg:8,range:24,spd:50,rate:.8,col:'#4f8fff',kind:'sword'},
  {key:'2',ic:'🗼',name:'타워',cost:90,hp:320,dmg:9,range:210,spd:0,rate:.85,col:'#8a8f9c',kind:'tower',ranged:1,fixed:1},
@@ -100,7 +102,7 @@ const bDm=()=>[1,1.6,2.6,4][S.lv.bld||0],bHm=()=>[1,1.6,2.4,3.5][S.lv.bld||0];
 const towerDmg=u=>u.base.dmg*S.aAtk*bDm();
 const UPS=[
  {key:'q',ic:'👑',sh:'영주공격',name:'영주 공격력',lv:'dmg',max:50,cost:l=>Math.round((60+l*30+l*l*4.5)*BAL.lc),apply:()=>S.lordDmg=lordDmgAt(S.lv.dmg)},
- {key:'w',ic:'⚡',sh:'영주공속',name:'영주 공속',lv:'rate',max:50,cost:l=>Math.round((80+l*40+l*l*2)*BAL.lc),apply:()=>S.lordRate=1/(1+0.18*S.lv.rate)},
+ {key:'w',ic:'⚡',sh:'영주공속',name:'영주 공속',lv:'rate',max:50,cost:l=>Math.round((80+l*40+l*l*2)*BAL.lc),apply:()=>S.lordRate=1/(1+BAL.lr*S.lv.rate)},
  {key:'e',ic:'🏰',sh:'성벽',name:'성벽 강화',lv:'wall',max:99,cost:l=>50+l*40,apply:()=>{S.castleMax+=100;S.castle=Math.min(S.castleMax,S.castle+150)}},
  {key:'r',ic:'🏹',sh:'성벽궁수',name:'성벽 궁수 (최대 4)',lv:'warch',max:4,cost:l=>[300,700,1500,3000][l],apply:()=>{}},
  {key:'u',ic:'🏛️',sh:'건물',name:'건물 업그레이드 (타워: 석궁병 → 대형석궁탑 → 왕실 석궁탑, 성벽)',lv:'bld',max:3,cost:l=>[2000,5000,12000][l],apply:()=>{S.units.forEach(u=>{if(u.kind=='tower'){u.dmg=towerDmg(u);u.max=u.base.hp*bHm();u.hp=u.max;}});S.castleMax+=300;S.castle=Math.min(S.castleMax,S.castle+300);S.fx.push({x:CX+200,y:TOP+60,t:1.8,txt:'🏛️ 건물 Lv'+S.lv.bld,col:'#ffd27a'});SFX.horn();}},
@@ -118,7 +120,7 @@ function spawnEnemy(){const w=S.wave,bossN=Math.floor(w/5),boss=w%5==0&&(S.spawn
  // elite mid-boss: one per wave (from wave 2), drops a bomb when killed
  if(!boss&&w>=2&&S.spawnLeft==S.eliteAt){e.hp*=7;e.spd=26;e.r=22;e.kind='elite';e.dmg*=2.5;e.gold*=6;}
  if(boss){const g=1+BAL.bg*(bossN-1);e.hp=bossHp(w);e.spd=22+bossN*1.5;e.r=Math.min(46,30+bossN*3);e.kind='boss';e.dmg*=BAL.bd*g;e.gold=80*bossN;e.tier=bossN;if(w%10==0&&(S.megaN||0)<w/10){S.megaN=(S.megaN||0)+1;e.hp*=BAL.mega;e.dmg*=1.3;e.r=Math.min(54,e.r+8);e.spd*=0.85;e.gold*=2;e.mega=1;}}
- e.gold=Math.round(e.gold*(1+w*BAL.gold));e.max=e.hp;S.enemies.push(e);}
+ e.hp*=waveHpK(w);e.gold=Math.round(e.gold*(1+w*BAL.gold));e.max=e.hp;S.enemies.push(e);}
 // a regular boss's HP at wave w (the giant boss of every 10th wave has 3x this); the ultimate takes 15% off a giant boss
 function bossHp(w){const g=1+BAL.bg*(Math.max(1,Math.floor(w/5))-1);return (26+w*12+w*w*.35)*18*g*g*(1+Math.max(0,w-20)*0.07);}
 // ultimate scales with the lord's attack; keeping the lord upgraded roughly in step with the waves makes it take ~15% off a giant boss
@@ -170,7 +172,7 @@ function update(dt){
  for(const e of S.enemies){if(e.hitK>0)e.hitK-=dt;if(e.stun>0){e.stun-=dt;if(e.kx){const m=Math.min(e.kx,dt*260);e.x+=m;e.kx-=m;}continue;}e.t-=dt;e.walk+=dt*e.spd/6;const[u,d]=nearest(S.units,e.x,e.y);e.atk=Math.max(0,(e.atk||0)-dt*4);
   if(u&&d<=e.range+e.r+(u.barr?24:8)){if(e.t<=0){e.t=e.rate;e.atk=1;u.hp-=e.dmg;if(u.barr)hit(e,u.dmg);}}
   else if(e.x>CX+50+e.r){const sm=e.slowT>0?Math.max(.2,Math.pow(.5,e.slowN||1)):1;e.slowT=(e.slowT||0)-dt;e.x-=e.spd*sm*dt;if(u&&d<120)e.y+=Math.sign(u.y-e.y)*e.spd*sm*dt*.5;}
-  else if(e.t<=0){e.t=e.rate;e.atk=1;S.castle-=e.dmg;S.shake=4;SFX.castle();}}
+  else if(e.t<=0){e.t=e.rate;e.atk=1;S.castle-=e.dmg*BAL.cd;S.shake=4;SFX.castle();}}
  for(const s of S.shots){
   if(s.free){s.x+=Math.cos(s.a)*s.spd*dt;s.y+=Math.sin(s.a)*s.spd*dt;s.life-=dt;if(s.life<=0||s.x>W+20||s.y<0||s.y>H)s.dead=1;
    for(const e of S.enemies)if(!e.dead&&Math.hypot(e.x-s.x,e.y-s.y)<e.r+4){hit(e,s.dmg);s.dead=1;break;}continue;}

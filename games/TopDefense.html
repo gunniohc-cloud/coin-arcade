@@ -60,7 +60,7 @@ function whoosh(d,v,f0,f1){if(!AC||muted)return;if(!NB){NB=AC.createBuffer(1,AC.
 // Karplus-Strong plucked string: a noise burst circulating in a delay line with a soft lowpass; sounds like a real string being plucked
 function ksPluck(f,v,dur,bright){if(!AC||muted)return;const sr=AC.sampleRate,len=Math.floor(sr*dur),buf=AC.createBuffer(1,len,sr),y=buf.getChannelData(0),N=Math.max(2,Math.round(sr/f));
  for(let i=0;i<N;i++)y[i]=(Math.random()*2-1)*(1-(1-bright)*Math.random());const damp=0.9965;
- for(let i=N;i<len;i++)y[i]=damp*(bright*y[i-N]+(1-bright)*0.5*(y[i-N]+y[i-N-1])+(bright>.8?0:0))*0.5+damp*0.5*0.5*(y[i-N]+y[i-N-1]);
+ const lp=1-bright*0.5;for(let i=N;i<len;i++)y[i]=damp*((1-lp)*y[i-N]+lp*0.5*(y[i-N]+y[i-N-1])); /* brighter = less smoothing per pass */
  const s=AC.createBufferSource(),q=AC.createGain(),n=AC.currentTime;s.buffer=buf;q.gain.setValueAtTime(v,n);q.gain.exponentialRampToValueAtTime(.001,n+dur);s.connect(q);q.connect(OUTN||master);s.start(n);}
 let OUTN=null,REV=null;
 function withRev(fn){if(!AC)return;if(!REV){const len=AC.sampleRate*6,ir=AC.createBuffer(2,len,AC.sampleRate);for(let c=0;c<2;c++){const a=ir.getChannelData(c);for(let i=0;i<len;i++)a[i]=(Math.random()*2-1)*Math.pow(1-i/len,3.2);}

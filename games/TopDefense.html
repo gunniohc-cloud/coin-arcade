@@ -615,7 +615,7 @@ function endDrag(ev,forceCancel){if(!drag)return;const d=drag;drag=null;try{cv.r
  if(forceCancel||d.cancel||S.over||S.paused)return;
  const [lx,ly]=P(...lordPos());let dx=d.x-lx,dy=d.y-ly;const L=Math.hypot(dx,dy)||1;dx/=L;dy/=L;
  const q=beatQuality(d),mul=q=='PERFECT'?2:q=='GOOD'?1.3:0.7;
- S.bombs--;superShots.push({x:lx,y:ly,dx,dy,t:0,hit:new Set(),trail:[],dmg:Math.round(superDmg()*mul)});SFX.ding(q=='PERFECT');S.shake=Math.max(S.shake,q=='PERFECT'?12:8);
+ S.bombs--;superShots.push({x:lx,y:ly,ox:lx,oy:ly,dx,dy,t:0,delay:.5,spd:4200,boltT:0,seed:Math.random()*99,hit:new Set(),trail:[],dmg:Math.round(superDmg()*mul)});SFX.ding(q=='PERFECT');S.shake=Math.max(S.shake,q=='PERFECT'?12:8);
  S.fx.push({...wrld(lx+dx*90,ly+dy*90-20),t:1.1,txt:q=='PERFECT'?'✨ PERFECT! ×2':q=='GOOD'?'GOOD ×1.3':'박자 놓침 ×0.7',col:q=='PERFECT'?'#fff27a':q=='GOOD'?'#a8f0ff':'#ff9a9a'});}
 // rhythm draw: while aiming, the string is plucked on beats 1-2-3; letting go right on beat 4 (the 'ding') hits hardest.
 // The four-beat cycle repeats for as long as the player keeps holding.
@@ -629,17 +629,17 @@ cv.addEventListener('pointerup',ev=>endDrag(ev,false));
 cv.addEventListener('pointercancel',ev=>endDrag(ev,true));
 function wrld(sx,sy){const [x,y]=unP(sx,sy);return {x,y};}
 function superUpdate(dt){if(S.paused)return;const W=SBW();
- for(const s of superShots){if(s.done){for(const p of s.trail)p[2]+=dt;s.trail=s.trail.filter(p=>p[2]<0.5);continue;}const step=1500*dt;s.t+=dt;s.x+=s.dx*step;s.y+=s.dy*step;s.trail.push([s.x,s.y,0]);for(const p of s.trail)p[2]+=dt;s.trail=s.trail.filter(p=>p[2]<0.5);
+ for(const s of superShots){if(s.boltT>0)s.boltT-=dt;s.t+=dt;s.x+=s.dx*step;s.y+=s.dy*step;s.trail.push([s.x,s.y,0]);for(const p of s.trail)p[2]+=dt;s.trail=s.trail.filter(p=>p[2]<0.5);
   for(const e of [...S.enemies]){if(s.hit.has(e))continue;const [ex,ey]=P(e.x,e.y),rx=ex-s.x,ry=ey-s.y,along=rx*s.dx+ry*s.dy,side=Math.abs(rx*s.dy-ry*s.dx);
    if(along<20&&along>-step-30&&side<W+e.r){s.hit.add(e);e.superKill=e.hp<=s.dmg;e.stun=3+0.05*S.lv.dmg;e.hitK=.35;e.kx=e.kind=='boss'?(e.mega?14:22):60;hit(e,s.dmg);S.shake=Math.max(S.shake,6);once('shit',60,()=>{noise(.12,.5,500,1);tone(60,.25,'sine',.6,-25);});S.fx.push({x:e.x,y:e.y,r:e.r*2.4,t:.4});if(!e.superKill)for(let i=0;i<14;i++){const a=Math.random()*6.28,v=150+Math.random()*260;S.fx.push({x:e.x,y:e.y-e.r*.5,vx:Math.cos(a)*v,vy:Math.sin(a)*v-120,t:.55,part:i%3==0?'#ffffff':i%3==1?'#ffd040':'#ff5030'});}}}
   if(Math.random()<0.9)S.fx.push({...wrld(s.x+(Math.random()-.5)*W,s.y+(Math.random()-.5)*W),vx:(Math.random()-.5)*60,vy:-20-Math.random()*40,t:.4,part:Math.random()<.5?'#ffffff':'#ffe27a'});
   if(s.x<-80||s.x>CW+80||s.y<-80||s.y>CH+80)s.done=1;}
- superShots=superShots.filter(s=>!s.done||s.trail.length);}
+ superShots=superShots.filter(s=>!s.done||s.trail.length||s.boltT>0);}
 function drawSuperShots(){const W=SBW(),T=performance.now()/1000;
  for(const e of S.enemies){if(!(e.stun>0))continue;const [ex,ey]=P(e.x,e.y);
   if(e.hitK>0){g.save();g.globalAlpha=Math.min(1,e.hitK/.35)*.75;g.fillStyle='#ffffff';g.beginPath();g.arc(ex,ey-e.r*.2,e.r*1.15,0,7);g.fill();g.globalAlpha*=.6;g.strokeStyle='#ffd040';g.lineWidth=4;g.beginPath();g.arc(ex,ey-e.r*.2,e.r*(1.2+(.35-e.hitK)*4),0,7);g.stroke();g.restore();}
   g.save();g.lineCap='round';for(let i=0;i<3;i++){if(Math.random()<.35)continue;const a=Math.random()*6.28;let px=ex+Math.cos(a)*e.r*.3,py=ey-e.r*.4+Math.sin(a)*e.r*.3;g.beginPath();g.moveTo(px,py);for(let s=0;s<4;s++){px+=Math.cos(a)*e.r*.3+(Math.random()-.5)*e.r*.6;py+=Math.sin(a)*e.r*.3+(Math.random()-.5)*e.r*.6;g.lineTo(px,py);}g.strokeStyle='#bfe6ff';g.lineWidth=3;g.globalAlpha=.5;g.stroke();g.strokeStyle='#ffffff';g.lineWidth=1.2;g.globalAlpha=.95;g.stroke();}g.restore();}
- for(const s of superShots){g.save();g.lineCap='round';
+ for(const s of superShots){drawUltBolt(s,W,T);if(s.delay>0)continue;g.save();g.lineCap='round';
   // glowing trail
   for(let i=1;i<s.trail.length;i++){const a=s.trail[i-1],b=s.trail[i],k=1-b[2]/0.5;g.strokeStyle=`rgba(255,226,122,${0.35*k})`;g.lineWidth=W*2*k;g.beginPath();g.moveTo(a[0],a[1]);g.lineTo(b[0],b[1]);g.stroke();
    g.strokeStyle=`rgba(255,255,255,${0.8*k})`;g.lineWidth=W*0.5*k;g.beginPath();g.moveTo(a[0],a[1]);g.lineTo(b[0],b[1]);g.stroke();}
@@ -649,6 +649,19 @@ function drawSuperShots(){const W=SBW(),T=performance.now()/1000;
    g.fillStyle='#ffffff';g.beginPath();g.moveTo(26,0);g.lineTo(4,-8);g.lineTo(8,0);g.lineTo(4,8);g.closePath();g.fill();
    g.fillStyle='#ff9a20';[[-92,-14],[-92,4]].forEach(([fx,fy])=>{g.beginPath();g.moveTo(fx,fy);g.lineTo(fx+22,fy+5);g.lineTo(fx+22,fy+5+5);g.lineTo(fx,fy+10);g.fill();});}
   g.restore();}}
+// ultimate visuals: a charging glow at the lord during the wind-up; on release a long jagged lightning lane along the
+// whole flight path that flickers and fades, plus ghost after-images of the arrow along its trail
+function drawUltBolt(s,W,T){g.save();g.lineCap='round';g.lineJoin='round';
+ if(s.delay>0){const k=1-s.delay/.5,r=10+(1-k)*46;g.globalAlpha=.35+.5*k;g.strokeStyle='#9fe8ff';g.lineWidth=2+k*3;g.beginPath();g.arc(s.ox,s.oy,r,0,7);g.stroke();
+  g.globalAlpha=.25+.6*k;g.fillStyle='#fff6c0';g.beginPath();g.arc(s.ox,s.oy,6+k*14,0,7);g.fill();g.restore();return;}
+ if(s.boltT>0){const a=Math.min(1,s.boltT/.75),far=Math.max(CW,CH)*1.6,ex=s.ox+s.dx*far,ey=s.oy+s.dy*far,nx=-s.dy,ny=s.dx,n=26;
+  for(const [col,lw,amp,al] of [['#5fd8ff',W*1.1,W*.9,.35],['#bff4ff',W*.45,W*.55,.7],['#ffffff',W*.16,W*.35,1]]){g.globalAlpha=a*al;g.strokeStyle=col;g.lineWidth=lw*(.6+.4*a);g.beginPath();
+   for(let i=0;i<=n;i++){const u=i/n,j=i&&i<n?(Math.random()-.5)*2*amp:0,x=s.ox+(ex-s.ox)*u+nx*j,y=s.oy+(ey-s.oy)*u+ny*j;i?g.lineTo(x,y):g.moveTo(x,y);}g.stroke();}
+  /* side forks */
+  g.strokeStyle='#dff8ff';g.lineWidth=1.5;g.globalAlpha=a*.8;for(let k=0;k<5;k++){const u=Math.random()*.9,bx=s.ox+(ex-s.ox)*u,by=s.oy+(ey-s.oy)*u,sd=Math.random()<.5?-1:1;let x=bx,y=by;g.beginPath();g.moveTo(x,y);for(let q=0;q<4;q++){x+=s.dx*14+nx*sd*(8+Math.random()*10);y+=s.dy*14+ny*sd*(8+Math.random()*10);g.lineTo(x,y);}g.stroke();}}
+ /* after-images */
+ for(let i=0;i<s.trail.length;i+=3){const p=s.trail[i],k=1-p[2]/.5;if(k<=0)continue;g.save();g.globalAlpha=k*.35;g.translate(p[0],p[1]);g.rotate(Math.atan2(s.dy,s.dx));g.fillStyle='#fff6d0';g.fillRect(-70,-3,70,6);g.beginPath();g.moveTo(26,0);g.lineTo(0,-12);g.lineTo(0,12);g.fill();g.restore();}
+ g.restore();}
 function drawBombUI(){const b=bombBtn(),n=S.bombs,t=performance.now()/1000;beatTick();
  if(drag&&!drag.cancel&&!drag.out){ // beat dial around the finger: a thin hand sweeps once per 4 beats; 3 pluck marks then the 'ding' mark
   const {tau}=cyc(drag),cx=drag.x,cy=drag.y,R=40,A=s=>-Math.PI/2+s/CYCLE*Math.PI*2,marks=[...PLUCKS,DING];

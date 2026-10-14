@@ -87,8 +87,11 @@ const SFX={
   [[.12,.3],[.26,.2],[.42,.13],[.6,.07]].forEach(([dl,v])=>{noise(.45,v,260,0.7,dl,-120);tone(62,.4,'sine',v*1.2,-15,dl);});
   if(fire){noise(.45,.55,450,0.7,0,-250);noise(.45,.3,320,0.6,.3,-100);noise(.45,.2,320,0.6,.6,-100);for(let i=0;i<8;i++)noise(.04,.12,900+Math.random()*900,1.8,.05+Math.random()*.5);}}, /* ultimate: a huge, dark cinematic hit - deep bell partials + a low brass 'braaam' swell, sent through a long (~6s) reverb tail */
  /* drawing the great bow: a taut low string plucked (beats 1-2-3 of the rhythm draw) */
- /* pitches from the reference clip: D#4, D#4, then a semitone down to D4 */
- pluck:i=>withRev(()=>{const f=[311,311,296][i]||311;tone(f,.6,'triangle',.26,-4);tone(f*2,.3,'sine',.08,-8);tone(f*3.01,.14,'sine',.035);noise(.04,.06,f*6,3);}),
+ /* pitches picked by ear from the reference clip: A#3, D#4, D4. A plucked string with a rich harmonic series
+    (slightly inharmonic, upper partials dying faster), a short pluck transient, and a long reverb tail */
+ pluck:i=>withRev(()=>{const f=[233.08,311.13,293.66][i]||311.13;
+  [[1,.24,1.4,'triangle'],[2.003,.12,1.0,'sine'],[3.01,.07,.7,'sine'],[4.02,.045,.5,'sine'],[5.04,.03,.35,'sine'],[6.07,.018,.25,'sine']].forEach(([m,v,d,ty])=>tone(f*m,d,ty,v,-f*m*.006));
+  tone(f*.5,.9,'sine',.05);noise(.05,.08,f*5,2.5);noise(.02,.05,2400,1.5);}),
  ding:(perfect)=>{if(perfect)withRev(()=>{tone(392,3,'sine',.12);tone(587,2.4,'sine',.07);});withRev(()=>{const f0=131;[[1,.5,5.5],[2.0,.2,4.2],[2.76,.12,3.4],[0.5,.38,6]].forEach(([m,v,d])=>tone(f0*m,d,'sine',v));tone(f0*1.006,5,'sine',.22);
   braam(51,.5,3.4);braam(65.4,.35,3);tone(34,1.6,'sine',.75,-8);noise(.6,.12,500,.8,0,-350);});},
  coin:()=>tone(1300,.07,'triangle',.12),

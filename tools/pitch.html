@@ -33,6 +33,9 @@ ol{color:var(--dim);padding-left:20px;margin:6px 0}small{color:var(--dim)}
 <h2 style="font-size:16px;margin:18px 0 4px">🎸 후보음 들어보기</h2>
 <p>영상 소리와 번갈아 들어 보고, 같게 들리는 버튼을 알려 주세요. (게임에 쓰는 것과 같은 현 튕김 소리로 재생됩니다)</p>
 <div class="row" id="cands"></div>
+<h2 style="font-size:16px;margin:18px 0 4px">🔔 마지막 '딩' 후보 (2중 구성)</h2>
+<p>각 버튼은 <b>기본음 + 두 번째 음</b>을 겹친 종소리에 긴 잔향을 넣어 재생합니다. 영상의 딩과 가장 비슷한 버튼을 알려 주세요.</p>
+<div id="dings"></div>
 <div class="row"><span>직접 입력:</span><input id="hz" type="number" value="155" min="30" max="2000" style="width:90px;background:#0c0b10;color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:7px"> Hz <button id="playHz">▶ 재생</button><button id="dn">−반음</button><button id="up">+반음</button><span id="hzn"></span></div>
 <div class="row"><button id="copy">📋 결과 복사</button><button id="clear">지우기</button><span id="copied"></span></div>
 <textarea id="out" readonly placeholder="기록하면 여기에 결과가 나옵니다"></textarea>
@@ -104,6 +107,14 @@ const hzOf=(name,oct)=>440*Math.pow(2,(NOTES.indexOf(name)+12*(oct+1)-69)/12);
 $('playHz').onclick=()=>{const f=+$('hz').value;pluckTone(f);$('hzn').textContent=noteOf(f);};
 $('up').onclick=()=>{$('hz').value=(+$('hz').value*Math.pow(2,1/12)).toFixed(1);$('playHz').onclick();};
 $('dn').onclick=()=>{$('hz').value=(+$('hz').value/Math.pow(2,1/12)).toFixed(1);$('playHz').onclick();};
+// ---- 'ding' candidates: bell partials on the root + a second layer (octave / fifth / fourth), through a 5s reverb ----
+let REV=null;function rev(){if(!REV){const len=AC.sampleRate*5,ir=AC.createBuffer(2,len,AC.sampleRate);for(let c=0;c<2;c++){const a=ir.getChannelData(c);for(let i=0;i<len;i++)a[i]=(Math.random()*2-1)*Math.pow(1-i/len,3);}
+ const cv=AC.createConvolver();cv.buffer=ir;const w=AC.createGain();w.gain.value=.5;REV=AC.createGain();REV.connect(AC.destination);REV.connect(cv);cv.connect(w);w.connect(AC.destination);}return REV;}
+function bell(f,v,dst){const n=AC.currentTime;[[1,1,4.5],[2,.4,3.2],[2.76,.22,2.4],[4.07,.1,1.6],[.5,.5,5]].forEach(([m,a,d])=>{const o=AC.createOscillator(),q=AC.createGain();o.type='sine';o.frequency.value=f*m;q.gain.setValueAtTime(v*a,n);q.gain.exponentialRampToValueAtTime(.0005,n+d);o.connect(q);q.connect(dst);o.start(n);o.stop(n+d);});}
+function dingTone(f,ratio){ensureAC();const d=rev();bell(f,.22,d);bell(f*ratio,.12,d);}
+{const layers=[['옥타브',2],['5도',1.5],['4도',4/3]],roots=[['G',2],['A#',2],['B',2],['C',3],['C#',3],['D',3],['D#',3]];
+ roots.forEach(([nm,o])=>{const f=hzOf(nm,o),row=document.createElement('div');row.className='row';row.innerHTML='<span style="width:110px">'+nm+o+' ('+f.toFixed(0)+'Hz)</span>';
+  layers.forEach(([ln,r])=>{const b=document.createElement('button');b.textContent=nm+o+' + '+ln+' ('+noteOf(f*r).split(' ')[0]+')';b.onclick=()=>dingTone(f,r);row.appendChild(b);});$('dings').appendChild(row);});}
 // ---- spectrogram ----
 function drawSpec(){const c=$('spec'),g=c.getContext('2d'),W=c.width,H=c.height;g.fillStyle='#0c0b10';g.fillRect(0,0,W,H);if(!frames.length)return;
  const T=Math.max(frames[frames.length-1].t,1),fy=f=>H-(Math.log(f/40)/Math.log(4000/40))*H;

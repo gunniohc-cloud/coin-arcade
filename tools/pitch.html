@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>소리 분석기</title>
+<style>
+:root{--bg:#14121a;--panel:#1f1c28;--line:#3a3448;--fg:#ece8f4;--dim:#9a93ab;--acc:#ffc93c;--ok:#5be36b;--bad:#ff6b6b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 "Malgun Gothic",system-ui,sans-serif;padding:16px;max-width:1100px;margin:auto}
+h1{font-size:20px;margin:0 0 4px}p{margin:4px 0;color:var(--dim)}
+.row{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0;align-items:center}
+button,label.btn{background:var(--panel);color:var(--fg);border:2px solid var(--line);border-radius:8px;padding:9px 14px;font:inherit;font-weight:700;cursor:pointer}
+button:hover,label.btn:hover{border-color:var(--acc)}button.rec{border-color:var(--bad);color:#ffb0b0}button:disabled{opacity:.4;cursor:default}
+#status{font-weight:700}canvas{width:100%;display:block;background:#0c0b10;border:1px solid var(--line);border-radius:8px}
+#live{display:flex;gap:18px;flex-wrap:wrap;font-variant-numeric:tabular-nums;margin:8px 0}#live b{color:var(--acc);font-size:22px}
+textarea{width:100%;height:260px;background:#0c0b10;color:#d8f0d8;border:1px solid var(--line);border-radius:8px;padding:10px;font:12px/1.45 Consolas,monospace}
+ol{color:var(--dim);padding-left:20px;margin:6px 0}small{color:var(--dim)}
+</style></head><body>
+<h1>🎵 소리 분석기 (음정·타이밍 기록)</h1>
+<p>PC에서 나오는 소리(유튜브 탭 등)나 오디오 파일을 받아서, 소리가 날 때마다 <b>시각 · 음정(Hz/음이름) · 배음 · 크기 · 잔향 길이</b>를 기록하고 텍스트로 정리합니다. 결과 텍스트를 복사해서 Claude에게 붙여 넣으면 됩니다.</p>
+<ol>
+<li><b>탭 소리 캡처</b>를 누르고, 공유 창에서 유튜브가 열린 <b>Chrome 탭</b>을 고른 뒤 아래쪽 <b>「탭 오디오도 공유」</b>를 켜고 공유합니다.</li>
+<li><b>● 기록 시작</b> → 영상에서 원하는 부분(예: 17초)을 재생 → <b>■ 기록 정지</b>.</li>
+<li>아래 결과 텍스트를 <b>복사</b>해서 붙여 넣기. (파일이 있으면 <b>오디오 파일 열기</b>로 바로 분석해도 됩니다.)</li>
+</ol>
+<div class="row">
+ <button id="cap">🖥 탭 소리 캡처</button>
+ <button id="mic">🎤 마이크</button>
+ <label class="btn">📁 오디오 파일 열기<input id="file" type="file" accept="audio/*,video/*" hidden></label>
+ <button id="rec" disabled>● 기록 시작</button>
+ <span id="status">대기 중</span>
+</div>
+<div id="live"><span>음정 <b id="lf">–</b> Hz</span><span>음이름 <b id="ln">–</b></span><span>크기 <b id="ll">–</b> dB</span><span>기록된 소리 <b id="lc">0</b>개</span></div>
+<canvas id="spec" width="1100" height="300"></canvas>
+<small>위: 스펙트로그램(세로=주파수 40Hz~4kHz 로그 축, 밝을수록 큼) · 노란 선=검출된 기본 음정 · 빨간 세로선=소리 시작 지점</small>
+<div class="row"><button id="copy">📋 결과 복사</button><button id="clear">지우기</button><span id="copied"></span></div>
+<textarea id="out" readonly placeholder="기록하면 여기에 결과가 나옵니다"></textarea>
+<script>
+const $=id=>document.getElementById(id);
+let AC=null,src=null,an=null,stream=null,recording=false,t0=0,frames=[],events=[],raf=0,fileMode=false;
+const FFT=8192,HOP=0.02;
+const NOTES=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+function noteOf(f){if(!(f>0))return '–';const m=Math.round(69+12*Math.log2(f/440)),c=Math.round(100*(69+12*Math.log2(f/440)-m));return NOTES[(m%12+12)%12]+(Math.floor(m/12)-1)+(c?(c>0?' +':' ')+c+'c':'');}
+function ensureAC(){if(!AC)AC=new (window.AudioContext||window.webkitAudioContext)();AC.resume();return AC;}
+function setup(node){ensureAC();if(an)try{src.disconnect()}catch(e){}src=node;an=AC.createAnalyser();an.fftSize=FFT;an.smoothingTimeConstant=0;src.connect(an);$('rec').disabled=false;loop();}
+$('cap').onclick=async()=>{try{stream=await navigator.mediaDevices.getDisplayMedia({video:true,audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
+  if(!stream.getAudioTracks().length){$('status').textContent='⚠ 오디오가 공유되지 않았어요. 공유 창에서 「탭 오디오도 공유」를 켜 주세요.';return;}
+  stream.getVideoTracks().forEach(t=>t.stop());fileMode=false;setup(ensureAC().createMediaStreamSource(stream));$('status').textContent='🖥 탭 소리 연결됨 — ● 기록 시작을 누르세요';}
+ catch(e){$('status').textContent='캡처 취소/실패: '+e.message;}};
+$('mic').onclick=async()=>{try{stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});fileMode=false;setup(ensureAC().createMediaStreamSource(stream));$('status').textContent='🎤 마이크 연결됨';}catch(e){$('status').textContent='마이크 실패: '+e.message;}};
+$('file').onchange=async e=>{const f=e.target.files[0];if(!f)return;$('status').textContent='파일 분석 중…';const buf=await ensureAC().decodeAudioData(await f.arrayBuffer());analyzeBuffer(buf,f.name);};
+$('rec').onclick=()=>{if(!recording){frames=[];events=[];recording=true;t0=AC.currentTime;$('rec').textContent='■ 기록 정지';$('rec').classList.add('rec');$('status').textContent='🔴 기록 중…';}
+ else{recording=false;$('rec').textContent='● 기록 시작';$('rec').classList.remove('rec');$('status').textContent='기록 완료';report('실시간 캡처');}};
+$('copy').onclick=async()=>{const t=$('out');try{await navigator.clipboard.writeText(t.value);$('copied').textContent='복사됨!';}catch(e){t.select();document.execCommand&&document.execCommand('copy');$('copied').textContent='선택됨 — Ctrl+C';}};
+$('clear').onclick=()=>{frames=[];events=[];$('out').value='';$('lc').textContent=0;drawSpec();};
+// ---- analysis of one frame (time-domain block + spectrum) ----
+function analyzeFrame(td,sr,spec,t){let rms=0;for(const v of td)rms+=v*v;rms=Math.sqrt(rms/td.length);const db=20*Math.log10(rms+1e-9);
+ const f0=rms>0.003?yin(td,sr):0;
+ // spectral peaks (top 6, 40Hz-6kHz)
+ const peaks=[],bin=sr/(spec.length*2);for(let i=2;i<spec.length-2;i++){const f=i*bin;if(f<40||f>6000)continue;const v=spec[i];if(v>spec[i-1]&&v>=spec[i+1]&&v>spec[i-2]&&v>=spec[i+2]&&v>-90){const a=spec[i-1],c=spec[i+1],p=.5*(a-c)/(a-2*v+c);peaks.push([(i+p)*bin,v]);}}
+ peaks.sort((a,b)=>b[1]-a[1]);
+ return {t,db,f0,bw:bin,peaks:peaks.slice(0,6),spec:Float32Array.from(spec.slice(0,Math.ceil(4000/bin)+1))};}
+// YIN pitch detector
+function yin(buf,sr){const N=Math.min(buf.length,4096),W=N>>1,d=new Float32Array(W);for(let tau=1;tau<W;tau++){let s=0;for(let i=0;i<W;i++){const x=buf[i]-buf[i+tau];s+=x*x;}d[tau]=s;}
+ let run=0;d[0]=1;for(let tau=1;tau<W;tau++){run+=d[tau];d[tau]=d[tau]*tau/(run||1);}
+ const minT=Math.floor(sr/2000),maxT=Math.min(W-1,Math.floor(sr/40));let tau=-1;for(let t=minT;t<maxT;t++){if(d[t]<0.15){while(t+1<maxT&&d[t+1]<d[t])t++;tau=t;break;}}
+ if(tau<0)return 0;const a=d[tau-1],b=d[tau],c=d[tau+1]||b,den=2*(2*b-a-c);const tt=den?tau+(c-a)/den:tau;return sr/tt;}
+// ---- live loop ----
+const td=new Float32Array(FFT),fd=new Float32Array(FFT/2);let lastT=0;
+function loop(){cancelAnimationFrame(raf);const step=()=>{raf=requestAnimationFrame(step);if(!an)return;an.getFloatTimeDomainData(td);an.getFloatFrequencyData(fd);
+ const t=AC.currentTime-t0,fr=analyzeFrame(td.slice(FFT-4096),AC.sampleRate,fd,t);$('lf').textContent=fr.f0?fr.f0.toFixed(1):'–';$('ln').textContent=noteOf(fr.f0);$('ll').textContent=fr.db.toFixed(0);
+ if(recording&&t-lastT>=HOP-0.002){lastT=t;frames.push(fr);detectOnsets();if(frames.length%3==0)drawSpec();}};step();}
+// onset = sudden rise in loudness (6dB above the last 100ms minimum, and above the floor)
+function detectOnsets(){const i=frames.length-1,f=frames[i];if(i<3)return;let mn=1e9;for(let k=Math.max(0,i-5);k<i;k++)mn=Math.min(mn,frames[k].db);
+ const last=events[events.length-1];if(f.db>-50&&f.db-mn>6&&(!last||f.t-last.t>0.08)){events.push({t:f.t,i});$('lc').textContent=events.length;}}
+// ---- offline file analysis ----
+function analyzeBuffer(buf,name){const sr=buf.sampleRate,ch=buf.getChannelData(0),hop=Math.round(sr*HOP),N=4096;frames=[];events=[];
+ for(let s=0;s+N<ch.length;s+=hop){const blk=ch.subarray(s,s+N),spec=fftDb(blk);frames.push(analyzeFrame(blk,sr,spec,s/sr));detectOnsets();}
+ $('lc').textContent=events.length;drawSpec();report('파일: '+name);$('status').textContent='파일 분석 완료';}
+function fftDb(x){const n=x.length,re=new Float32Array(n),im=new Float32Array(n);for(let i=0;i<n;i++)re[i]=x[i]*(0.5-0.5*Math.cos(2*Math.PI*i/(n-1)));
+ for(let i=1,j=0;i<n;i++){let b=n>>1;for(;j&b;b>>=1)j^=b;j^=b;if(i<j){[re[i],re[j]]=[re[j],re[i]];[im[i],im[j]]=[im[j],im[i]];}}
+ for(let len=2;len<=n;len<<=1){const a=-2*Math.PI/len,wr=Math.cos(a),wi=Math.sin(a);for(let i=0;i<n;i+=len){let cr=1,ci=0;for(let k=0;k<len/2;k++){const ur=re[i+k],ui=im[i+k],vr=re[i+k+len/2]*cr-im[i+k+len/2]*ci,vi=re[i+k+len/2]*ci+im[i+k+len/2]*cr;re[i+k]=ur+vr;im[i+k]=ui+vi;re[i+k+len/2]=ur-vr;im[i+k+len/2]=ui-vi;const t=cr*wr-ci*wi;ci=cr*wi+ci*wr;cr=t;}}}
+ const out=new Float32Array(n/2);for(let i=0;i<n/2;i++)out[i]=20*Math.log10(Math.hypot(re[i],im[i])/n*4+1e-9);return out;}
+// ---- report: one block per detected sound ----
+function report(srcName){if(!frames.length){$('out').value='기록된 소리가 없습니다.';return;}
+ const L=[];L.push('[소리 분석 결과] '+srcName+' · 길이 '+frames[frames.length-1].t.toFixed(2)+'s · 소리 '+events.length+'개 · 프레임 간격 '+HOP*1000+'ms');
+ events.forEach((ev,n)=>{const end=n+1<events.length?events[n+1].i:frames.length,seg=frames.slice(ev.i,end),pk=seg.reduce((a,b)=>b.db>a.db?b:a,seg[0]);
+  // pitch: median of voiced frames in the first 150ms after the peak
+  const v=seg.filter(f=>f.f0>0&&f.t-ev.t<0.25).map(f=>f.f0).sort((a,b)=>a-b),f0=v.length?v[v.length>>1]:0;
+  // decay: time from peak until 20dB down (or segment end)
+  let dec='>'+(seg[seg.length-1].t-pk.t).toFixed(2)+'s';for(const f of seg)if(f.t>pk.t&&f.db<pk.db-20){dec=(f.t-pk.t).toFixed(2)+'s';break;}
+  const gap=n?(ev.t-events[n-1].t).toFixed(3)+'s':'-';
+  L.push(`#${n+1} t=${ev.t.toFixed(3)}s (앞 소리와 간격 ${gap}) | 기본음 ${f0?f0.toFixed(1)+'Hz '+noteOf(f0):'검출 안 됨'} | 최대 ${pk.db.toFixed(1)}dB | -20dB 감쇠 ${dec}`);
+  L.push('    배음 피크: '+pk.peaks.map(([f,d])=>f.toFixed(0)+'Hz('+noteOf(f).split(' ')[0]+','+d.toFixed(0)+'dB)').join(', '));
+  // pitch glide within the sound
+  const tr=seg.filter((f,i)=>i%3==0&&f.f0>0).slice(0,8).map(f=>f.f0.toFixed(0));if(tr.length>2)L.push('    음정 흐름: '+tr.join(' → ')+' Hz');});
+ L.push('[전체 음정 트랙 50ms 간격] '+frames.filter((f,i)=>i%Math.round(0.05/HOP)==0).map(f=>f.t.toFixed(2)+':'+(f.f0?f.f0.toFixed(0):'-')+'/'+f.db.toFixed(0)).join(' '));
+ $('out').value=L.join('\n');}
+// ---- spectrogram ----
+function drawSpec(){const c=$('spec'),g=c.getContext('2d'),W=c.width,H=c.height;g.fillStyle='#0c0b10';g.fillRect(0,0,W,H);if(!frames.length)return;
+ const T=Math.max(frames[frames.length-1].t,1),fy=f=>H-(Math.log(f/40)/Math.log(4000/40))*H;
+ const cw=Math.max(1,W/frames.length);frames.forEach((fr,i)=>{const x=fr.t/T*W;for(let y=0;y<H;y+=2){const f=40*Math.pow(4000/40,(H-y)/H),v=fr.spec[Math.min(fr.spec.length-1,Math.round(f/fr.bw))]??-140,a=Math.max(0,Math.min(1,(v+100)/70));if(a>0.02){g.fillStyle=`hsl(${260-a*220},90%,${a*60}%)`;g.fillRect(x,y,cw+1,2);}}
+  if(fr.f0){g.fillStyle='#ffe14a';g.fillRect(x,fy(fr.f0)-1,cw+1,3);}});
+ g.strokeStyle='#ff5050';events.forEach(ev=>{const x=ev.t/T*W;g.beginPath();g.moveTo(x,0);g.lineTo(x,H);g.stroke();});
+ g.fillStyle='#9a93ab';g.font='11px sans-serif';[50,100,200,400,800,1600,3200].forEach(f=>g.fillText(f+'Hz',4,fy(f)));}
+</script></body></html>

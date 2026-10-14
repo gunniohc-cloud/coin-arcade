@@ -54,7 +54,7 @@ let NB=null;function noise(d,v=.15,freq=2000,q=1,dl=0,sweep=0){if(!AC||muted)ret
  const n=AC.currentTime+dl,s=AC.createBufferSource(),f=AC.createBiquadFilter(),g=AC.createGain();s.buffer=NB;f.type='bandpass';f.frequency.setValueAtTime(freq,n);if(sweep)f.frequency.exponentialRampToValueAtTime(Math.max(80,freq+sweep),n+d);f.Q.value=q;
  g.gain.setValueAtTime(v,n);g.gain.exponentialRampToValueAtTime(.001,n+d);s.connect(f);f.connect(g);g.connect(master);s.start(n,Math.random()*0.5,d+0.02);}
 // noise that fades IN (instead of starting at full volume) so it has no click at the start, then trails off
-function whoosh(d,v,f0,f1){if(!AC||muted)return;noise(0,0);const n=AC.currentTime,s=AC.createBufferSource(),f=AC.createBiquadFilter(),q=AC.createGain();s.buffer=NB;f.type='bandpass';f.Q.value=0.9;f.frequency.setValueAtTime(f0,n);f.frequency.exponentialRampToValueAtTime(f1,n+d);
+function whoosh(d,v,f0,f1){if(!AC||muted)return;if(!NB){NB=AC.createBuffer(1,AC.sampleRate,AC.sampleRate);const a=NB.getChannelData(0);for(let i=0;i<a.length;i++)a[i]=Math.random()*2-1;}const n=AC.currentTime,s=AC.createBufferSource(),f=AC.createBiquadFilter(),q=AC.createGain();s.buffer=NB;f.type='bandpass';f.Q.value=0.9;f.frequency.setValueAtTime(f0,n);f.frequency.exponentialRampToValueAtTime(f1,n+d);
  q.gain.setValueAtTime(0.0001,n);q.gain.exponentialRampToValueAtTime(v,n+d*0.3);q.gain.exponentialRampToValueAtTime(0.0001,n+d);s.connect(f);f.connect(q);q.connect(master);s.start(n,Math.random()*0.5,d+0.02);}
 const thr={};const once=(k,ms,fn)=>{const n=performance.now();if(n-(thr[k]||0)<ms)return;thr[k]=n;fn();};
 const SFX={

@@ -111,7 +111,7 @@ const UPS=[
  {key:'t',ic:'🗡️',sh:'병사공격',name:'병사 공격력',lv:'uatk',max:99,cost:l=>Math.round((70+l*55)*(1+l*BAL.su)),apply:()=>{S.uAtk+=.3;S.units.forEach(u=>{if(u.kind=='sword')u.dmg=u.base.dmg*S.uAtk;});promo();}},
  {key:'y',ic:'❤️',sh:'병사체력',name:'병사 체력',lv:'uhp',max:99,cost:l=>Math.round((70+l*55)*(1+l*BAL.su)),apply:()=>{S.uHp+=.6;S.units.forEach(u=>{if(u.kind=='sword'){const r=u.hp/u.max;u.max=u.base.hp*S.uHp*swMul();u.hp=u.max*r;}});promo();}}];
 function reset(go){lastSWT=0;S={started:!!go,gold:90,wave:1,castle:300,castleMax:300,lordDmg:10,lordRate:1,lordT:0,arrows:1,tArch:1,uAtk:1,uHp:1,aAtk:1,income:2,incT:0,
- units:[],enemies:[],shots:[],fx:[],boulders:[],pools:[],items:[],bombs:1,spawnLeft:0,spawnT:0,waveT:1,over:false,paused:false,kills:0,shake:0,t:0,
+ units:[],enemies:[],shots:[],fx:[],boulders:[],pools:[],items:[],bombs:3,spawnLeft:0,spawnT:0,waveT:1,over:false,paused:false,kills:0,shake:0,t:0,
  lv:{dmg:0,rate:0,wall:0,warch:0,bld:0,barr:0,aatk:0,uatk:0,uhp:0},lordAim:0,waveBonus:0};S.spawnLeft=8+S.wave*4;S.eliteAt=Math.ceil(S.spawnLeft/2);}
 function spawnEnemy(){const w=S.wave,bossN=Math.floor(w/5),boss=w%5==0&&(S.spawnLeft==1||(bossN>=2&&S.spawnLeft==S.eliteAt)||(bossN>=4&&S.spawnLeft==Math.ceil(S.eliteAt*1.6))),r=Math.random(); /* every 5th wave a boss; from wave 10 two, from wave 20 three */
  let e={x:W+20,y:TOP+Math.random()*(BOT-TOP),hp:(26+w*12+w*w*.35)*(1+Math.max(0,w-20)*0.07)*(1+Math.max(0,w-12)*BAL.hp),spd:40+Math.random()*18,dmg:(6+w*1.5)*(1+w*BAL.dmg),range:20,rate:1,t:0,kind:'grunt',r:13,gold:Math.round((4+(w>>1))*1.3),pend:0,walk:Math.random()*9};
@@ -132,9 +132,10 @@ function pickTarget(x,y,range){let b=null,d=1e9;for(const e of S.enemies){if(e.h
 function nearest(arr,x,y){let b=null,d=1e9;for(const o of arr){const dd=Math.hypot(o.x-x,o.y-y);if(dd<d){d=dd;b=o}}return [b,d];}
 function hit(e,dmg){e.hp-=dmg;SFX.hit();e.hitT=.12;for(let i=0;i<3;i++)S.fx.push({x:e.x,y:e.y,vx:(Math.random()-.5)*140,vy:-40-Math.random()*90,t:.25,part:"#fff3a0"});S.fx.push({x:e.x+(Math.random()-.5)*10,y:e.y-e.r-6,t:.6,txt:Math.round(dmg)});if(e.hp<=0&&!e.dead)kill(e);}
 function kill(e){e.dead=1;SFX.kill();S.gold+=e.gold;S.kills++;if(e.superKill)S.fx.push({dis:e,t:.9});else for(let i=0;i<8;i++)S.fx.push({x:e.x,y:e.y,vx:(Math.random()-.5)*160,vy:-Math.random()*160,t:.5,part:e.kind=='boss'?'#3a0d0d':'#7fbf4a'});
- if(e.kind=='elite')gainBomb(e.x,e.y-30,'🏹 필살 +1',1);if(e.kind=='boss')gainBomb(e.x,e.y-30,'🏹 필살 +2',2);}
-// ultimate charges: +1 per mid-boss, +2 per boss, up to 5
-function gainBomb(x,y,txt,n=1){const full=S.bombs>=5;if(!full){S.bombs=Math.min(5,S.bombs+n);SFX.pick();}S.fx.push({x,y,t:1.2,txt:full?'🏹 필살 가득':txt,col:'#ffd27a'});}
+ if(e.mega)gainBomb(e.x,e.y-30,'🏹 필살 +2',2);}
+// ultimate charges: start with 3, +2 per giant boss (every 10th wave), up to 9
+const BOMB_MAX=9;
+function gainBomb(x,y,txt,n=1){const full=S.bombs>=BOMB_MAX;if(!full){S.bombs=Math.min(BOMB_MAX,S.bombs+n);SFX.pick();}S.fx.push({x,y,t:1.2,txt:full?'🏹 필살 가득':txt,col:'#ffd27a'});}
 function fireLord(){const [sx,sy]=lordPos();const t=pickTarget(sx,sy,900);if(!t)return false;
  const a=Math.atan2(t.y-sy,t.x-sx);S.lordAim=a;t.pend+=S.lordDmg;
  S.shots.push({x:sx,y:sy,tg:t,dmg:S.lordDmg,spd:700,a,lord:1});
@@ -453,7 +454,7 @@ function draw(){
  if(!S.over){drawTowerDrag();drawRepair();drawBombUI();}g.textAlign='center';
  if(!S.started){g.fillStyle='#000a';g.fillRect(0,0,CW,CH);g.fillStyle='#ffd27a';g.font=`bold ${PORT?40:52}px "Malgun Gothic"`;g.fillText('영주 디펜스',cx,cy-30);
   g.fillStyle='#fff';g.font='bold 20px "Malgun Gothic"';g.globalAlpha=.6+Math.sin(performance.now()/300)*.4;g.fillText('화면을 터치하면 시작',cx,cy+20);g.globalAlpha=1;
-  g.font='14px "Malgun Gothic"';g.fillStyle='#ccb';g.fillText('🏹 필살 화살: 버튼을 드래그해서 조준 · 중간보스·보스 처치로 충전',cx,cy+54);}
+  g.font='14px "Malgun Gothic"';g.fillStyle='#ccb';g.fillText('🏹 필살 화살: 버튼을 드래그해서 조준 · 대형 보스 처치 시 +2 (최대 9)',cx,cy+54);}
  if(S.paused){g.font='bold 40px "Malgun Gothic"';g.fillStyle='#fff';g.fillText('일시정지',cx,cy);}
  if(S.over){g.fillStyle='#000b';g.fillRect(0,0,CW,CH);g.fillStyle='#fff';g.font=`bold ${PORT?34:44}px "Malgun Gothic"`;g.fillText(S.won?'🏆 승리! 왕국을 지켜냈습니다':'성이 함락되었습니다',cx,cy-10);
   g.font='18px "Malgun Gothic"';g.fillText(S.won?`⏱ 클리어 시간 ${fmtT(S.t)} · 처치 ${S.kills}`:`웨이브 ${S.wave} · ${fmtT(S.t)} · 처치 ${S.kills}`,cx,cy+26);g.fillText('터치/클릭하여 재시작',cx,cy+52);}
@@ -579,7 +580,7 @@ function drawBombUI(){const b=bombBtn(),n=S.bombs,t=performance.now()/1000;
  if(n&&!drag){g.globalAlpha=.25+Math.sin(t*4)*.15;g.beginPath();g.arc(b.x,b.y,b.r+5,0,7);g.strokeStyle='#ffe27a';g.lineWidth=3;g.stroke();g.globalAlpha=n?1:.45;}
  g.save();g.translate(b.x,b.y);g.rotate(-Math.PI/4);g.fillStyle='#fff6d0';g.fillRect(-14,-2,22,4);g.fillStyle='#ffd040';g.beginPath();g.moveTo(15,0);g.lineTo(6,-7);g.lineTo(6,7);g.fill();g.fillStyle='#ff9a20';g.fillRect(-17,-5,5,10);g.restore();
  g.globalAlpha=1;g.beginPath();g.arc(b.x+b.r*.72,b.y+b.r*.72,13,0,7);g.fillStyle=n?'#e0a02f':'#555';g.fill();g.strokeStyle='#fff';g.lineWidth=2;g.stroke();
- g.fillStyle='#fff';g.font='bold 15px sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText(n,b.x+b.r*.72,b.y+b.r*.72+1);g.textBaseline='alphabetic';
+ g.fillStyle='#fff';g.font='bold 15px sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText(n,b.x+b.r*.72,b.y+b.r*.72+1);if(n>=BOMB_MAX){g.font='bold 9px sans-serif';g.fillStyle='#ffd27a';g.fillText('MAX',b.x+b.r*.72,b.y+b.r*.72+20);}g.textBaseline='alphabetic';
  g.font='bold 11px "Malgun Gothic"';g.fillStyle='#fbeed3';g.fillText(drag?'여기로 놓으면 취소':'필살 화살 · 드래그로 조준',b.x-(PORT?40:0),b.y-b.r-8);
  g.restore();
  if(!drag||drag.out)return;

@@ -165,13 +165,16 @@ function update(dt){
    if(u.t<=0)for(let k=0;k<(u.arch||1);k++){const tg=pickTarget(ox,oy,u.range)||first;if(!tg)break;first=first||tg;u.face=Math.sign(tg.x-u.x)||1;tg.pend+=u.dmg;const [ax,ay]=unP(tsx+(k-((u.arch||1)-1)/2)*9,tsy-tz);S.shots.push({x:ax,y:ay,tg,dmg:u.dmg,spd:(S.lv.bld||0)?760:560,a:0,bolt:(S.lv.bld||0)>=1,big:(S.lv.bld||0)>=2});}
    if(first)u.t=u.rate;continue;}
   if(u.hx==null){u.hx=u.ranged?CX+30+Math.random()*35:CX+70+Math.random()*50;u.hy=u.y;}
-  const near=S.enemies.filter(e=>e.x<(u.ranged?u.x+u.range:ENGAGE));const[e,d]=nearest(near,u.x,u.y);
+  const near=S.enemies.filter(e=>e.x<(u.ranged?u.x+u.range:ENGAGE));let[e,d]=nearest(near,u.x,u.y);
+  // player-ordered target: every swordsman goes for it first, wherever it is on the field
+  const ord=!u.ranged&&S.focus&&!S.focus.dead;if(ord){e=S.focus;d=Math.hypot(e.x-u.x,e.y-u.y);}
   const step=(tx,ty,sp)=>{const dx=tx-u.x,dy=ty-u.y,L=Math.hypot(dx,dy);if(L<2)return;u.face=Math.sign(dx)||u.face;const m=Math.min(L,sp*dt);u.x+=dx/L*m;u.y+=dy/L*m;};
   if(e&&d<=u.range+e.r){u.face=Math.sign(e.x-u.x)||1;if(u.t<=0){u.t=u.rate;u.atk=1;if(u.ranged){const tg=pickTarget(u.x,u.y,u.range+40)||e;tg.pend+=u.dmg;S.shots.push({x:u.x,y:u.y-10,tg,dmg:u.dmg,spd:500,a:0});}else{hit(e,u.dmg*(u.kind=='sword'?swMul():1));SFX.sword();}}}
-  else if(e&&!u.ranged)step(Math.min(e.x,MELEE_LINE),e.y,u.spd*1.2);
+  else if(e&&!u.ranged)step(ord?e.x:Math.min(e.x,MELEE_LINE),e.y,u.spd*(ord?1.5:1.2));
   else if(e&&u.ranged)step(u.hx,e.y,u.spd*.6); // archers just shuffle sideways to line up
   else step(u.hx,u.hy,u.spd*2.2);
-  u.x=Math.min(u.x,u.ranged?ARCH_LINE:MELEE_LINE);}
+  if(!ord)u.x=Math.min(u.x,u.ranged?ARCH_LINE:MELEE_LINE);}
+ if(S.focus&&(S.focus.dead||!S.enemies.includes(S.focus)))S.focus=null;
  for(const e of S.enemies){if(e.hitK>0)e.hitK-=dt;if(e.stun>0){e.stun-=dt;if(e.kx){const m=Math.min(e.kx,dt*260);e.x+=m;e.kx-=m;}continue;}e.t-=dt;e.walk+=dt*e.spd/6;const[u,d]=nearest(S.units,e.x,e.y);e.atk=Math.max(0,(e.atk||0)-dt*4);
   if(u&&d<=e.range+e.r+(u.barr?24:8)){if(e.t<=0){e.t=e.rate;e.atk=1;u.hp-=e.dmg;if(u.barr)hit(e,u.dmg);}}
   else if(e.x>CX+50+e.r){const sm=e.slowT>0?Math.max(.2,Math.pow(.5,e.slowN||1)):1;e.slowT=(e.slowT||0)-dt;e.x-=e.spd*sm*dt;if(u&&d<120)e.y+=Math.sign(u.y-e.y)*e.spd*sm*dt*.5;}
@@ -453,7 +456,7 @@ function draw(){
  if(S.spawnLeft==0&&!S.enemies.length&&!S.over){g.font='bold 32px "Malgun Gothic"';g.lineWidth=5;g.strokeStyle='#000';const t=`다음 웨이브 ${Math.ceil(S.waveT)}`;g.strokeText(t,cx,cy);g.fillStyle='#fff';g.fillText(t,cx,cy);}
  drawCastleHP();
  superUpdate(1/60);drawSuperShots();
- if(!S.over){drawTowerDrag();drawRepair();drawBombUI();}g.textAlign='center';
+ if(!S.over){drawFocus();drawTowerDrag();drawRepair();drawBombUI();}g.textAlign='center';
  if(!S.started){g.fillStyle='#000a';g.fillRect(0,0,CW,CH);g.fillStyle='#ffd27a';g.font=`bold ${PORT?40:52}px "Malgun Gothic"`;g.fillText('영주 디펜스',cx,cy-30);
   g.fillStyle='#fff';g.font='bold 20px "Malgun Gothic"';g.globalAlpha=.6+Math.sin(performance.now()/300)*.4;g.fillText('화면을 터치하면 시작',cx,cy+20);g.globalAlpha=1;
   g.font='14px "Malgun Gothic"';g.fillStyle='#ccb';g.fillText('🏹 필살 화살: 버튼을 드래그해서 조준 · 대형 보스 처치 시 +2 (최대 9)',cx,cy+54);}
@@ -505,6 +508,22 @@ function bombBtn(){return PORT?{x:CW-44,y:CH-175,r:28}:{x:72,y:BOT-92,r:30};}
 let drag=null;
 function evPos(ev){const r=cv.getBoundingClientRect();return {x:(ev.clientX-r.left)*CW/r.width,y:(ev.clientY-r.top)*CH/r.height,out:ev.clientX<r.left||ev.clientX>r.right||ev.clientY<r.top||ev.clientY>r.bottom};}
 const overBtn=p=>{const b=bombBtn();return Math.hypot(p.x-b.x,p.y-b.y)<b.r+6;};
+// ---------- attack orders: tap an orc to show an "attack" button; pressing it sends every swordsman after that orc ----------
+let selEnemy=null,atkBtn=null;
+function enemyTap(p){
+ if(selTower&&tBtns.some(b=>p.x>=b.x&&p.x<=b.x+b.w&&p.y>=b.y&&p.y<=b.y+b.h))return false; // tower menu buttons win
+ if(selEnemy&&atkBtn&&p.x>=atkBtn.x&&p.x<=atkBtn.x+atkBtn.w&&p.y>=atkBtn.y&&p.y<=atkBtn.y+atkBtn.h){S.focus=selEnemy;selEnemy=null;atkBtn=null;SFX.horn();return true;}
+ let best=null,bd=1e9;for(const e of S.enemies){const [ex,ey]=P(e.x,e.y),d=Math.hypot(p.x-ex,p.y-(ey-e.r*.5));if(d<e.r+14&&d<bd){bd=d;best=e;}}
+ if(best){selEnemy=best===selEnemy?null:best;selTower=null;return true;}
+ if(selEnemy){selEnemy=null;atkBtn=null;return true;}
+ return false;}
+function drawFocus(){const t=performance.now()/1000;atkBtn=null;
+ if(S.focus&&!S.focus.dead){const [x,y]=P(S.focus.x,S.focus.y),r=S.focus.r+8+Math.sin(t*8)*2;g.save();g.strokeStyle='#ff3030';g.lineWidth=2.5;g.beginPath();g.arc(x,y-S.focus.r*.4,r,0,7);g.stroke();
+  for(let i=0;i<4;i++){const a=i*Math.PI/2+t;g.beginPath();g.moveTo(x+Math.cos(a)*(r-5),y-S.focus.r*.4+Math.sin(a)*(r-5));g.lineTo(x+Math.cos(a)*(r+6),y-S.focus.r*.4+Math.sin(a)*(r+6));g.stroke();}g.restore();}
+ if(selEnemy){if(selEnemy.dead||!S.enemies.includes(selEnemy)){selEnemy=null;return;}const [x,y]=P(selEnemy.x,selEnemy.y),w=74,h=30,bx=Math.max(4,Math.min(CW-w-4,x-w/2)),by=Math.max(64,y-selEnemy.r*2-44);
+  g.save();g.strokeStyle='#ffd27a';g.setLineDash([4,3]);g.lineWidth=2;g.beginPath();g.arc(x,y-selEnemy.r*.4,selEnemy.r+6,0,7);g.stroke();g.setLineDash([]);
+  g.fillStyle='#a02020ee';g.beginPath();g.roundRect?g.roundRect(bx,by,w,h,9):g.rect(bx,by,w,h);g.fill();g.strokeStyle='#ffd27a';g.stroke();
+  g.fillStyle='#fff';g.font='bold 13px "Malgun Gothic"';g.textAlign='center';g.textBaseline='middle';g.fillText('⚔ 공격',bx+w/2,by+h/2+1);g.textBaseline='alphabetic';g.restore();atkBtn={x:bx,y:by,w,h};}}
 // ---------- tower menu: tap a tower to repair it or hire another archer for that tower (up to 4) ----------
 let selTower=null,tBtns=[];
 const sellValue=u=>Math.round((u.spent||u.cost)*0.6*Math.max(0.3,u.hp/u.max)); // 60% back, less if it's battered
@@ -540,6 +559,7 @@ function drawRepair(){tBtns=[];if(!selTower)return;if(!S.units.includes(selTower
 cv.addEventListener('pointerdown',ev=>{const wasStarted=S.started;au();
  if(S.over){reset(true);return;}if(!wasStarted||S.paused)return;
  const p=evPos(ev);
+ if(enemyTap(p))return;
  if(towerTap(p))return;
  if(overBtn(p)){if(S.bombs<=0){const b=bombBtn();S.fx.push({...wrld(b.x,b.y-40),t:.8,txt:'폭탄 없음',col:'#ff8080'});return;}
   drag={x:p.x,y:p.y,out:false,cancel:true};try{cv.setPointerCapture(ev.pointerId)}catch(e){}ev.preventDefault();}});

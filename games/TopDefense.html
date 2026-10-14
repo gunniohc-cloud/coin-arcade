@@ -56,8 +56,8 @@ let NB=null;function noise(d,v=.15,freq=2000,q=1,dl=0,sweep=0){if(!AC||muted)ret
 const thr={};const once=(k,ms,fn)=>{const n=performance.now();if(n-(thr[k]||0)<ms)return;thr[k]=n;fn();};
 const SFX={
  bow:()=>once('bow',60,()=>{noise(.16,.18,2600,2,0,-1800);tone(420,.05,'triangle',.06,-200);}),   // twang + whoosh of the arrow
- /* lord: a taut bowstring snapping - low plucked note that bends down, a wooden thunk and a short airy release */
- twang:()=>once('twang',70,()=>{tone(150,.22,'triangle',.22,-70);tone(300,.09,'sine',.09,-160);noise(.03,.22,900,2.5);noise(.12,.06,3200,2,.02,-2200);}),
+ /* lord arrow */
+ twang:()=>once('twang',70,()=>{noise(.2,.2,1800,1.2,0,-1300);noise(.14,.1,3400,1.5,.02,-2400);}), /* lord: just a quick 'whoosh' of the arrow cutting the air */
  /* tower and wall archers: the old arrow sound, much quieter and throttled since many shoot at once */
  arch:()=>once('arch',110,()=>{noise(.12,.06,2600,2,0,-1800);tone(420,.04,'triangle',.02,-200);}),
  hit:()=>once('hit',45,()=>{noise(.05,.16,900,1.5);tone(180,.05,'square',.05,-60);}),

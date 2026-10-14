@@ -69,10 +69,10 @@ function loop(){cancelAnimationFrame(raf);const step=()=>{raf=requestAnimationFr
  if(recording&&t-lastT>=HOP-0.002){lastT=t;frames.push(fr);detectOnsets();if(frames.length%3==0)drawSpec();}};step();}
 // onset = sudden rise in loudness (6dB above the last 100ms minimum, and above the floor)
 function detectOnsets(){const i=frames.length-1,f=frames[i];if(i<3)return;let mn=1e9;for(let k=Math.max(0,i-5);k<i;k++)mn=Math.min(mn,frames[k].db);
- const last=events[events.length-1];if(f.db>-50&&f.db-mn>6&&(!last||f.t-last.t>0.08)){events.push({t:f.t,i});$('lc').textContent=events.length;}}
+ const last=events[events.length-1];if(f.db>-50&&f.db-mn>6&&(!last||f.t-last.t>0.15)){events.push({t:f.t,i});$('lc').textContent=events.length;}}
 // ---- offline file analysis ----
 function analyzeBuffer(buf,name){const sr=buf.sampleRate,ch=buf.getChannelData(0),hop=Math.round(sr*HOP),N=4096;frames=[];events=[];
- for(let s=0;s+N<ch.length;s+=hop){const blk=ch.subarray(s,s+N),spec=fftDb(blk);frames.push(analyzeFrame(blk,sr,spec,s/sr));detectOnsets();}
+ for(let s=0;s+N<ch.length;s+=hop){const blk=ch.subarray(s,s+N),spec=fftDb(blk);frames.push(analyzeFrame(blk,sr,spec,(s+N-512)/sr));detectOnsets();}
  $('lc').textContent=events.length;drawSpec();report('파일: '+name);$('status').textContent='파일 분석 완료';}
 function fftDb(x){const n=x.length,re=new Float32Array(n),im=new Float32Array(n);for(let i=0;i<n;i++)re[i]=x[i]*(0.5-0.5*Math.cos(2*Math.PI*i/(n-1)));
  for(let i=1,j=0;i<n;i++){let b=n>>1;for(;j&b;b>>=1)j^=b;j^=b;if(i<j){[re[i],re[j]]=[re[j],re[i]];[im[i],im[j]]=[im[j],im[i]];}}

@@ -56,6 +56,10 @@ let NB=null;function noise(d,v=.15,freq=2000,q=1,dl=0,sweep=0){if(!AC||muted)ret
 const thr={};const once=(k,ms,fn)=>{const n=performance.now();if(n-(thr[k]||0)<ms)return;thr[k]=n;fn();};
 const SFX={
  bow:()=>once('bow',60,()=>{noise(.16,.18,2600,2,0,-1800);tone(420,.05,'triangle',.06,-200);}),   // twang + whoosh of the arrow
+ /* lord: a taut bowstring snapping - low plucked note that bends down, a wooden thunk and a short airy release */
+ twang:()=>once('twang',70,()=>{tone(150,.22,'triangle',.22,-70);tone(300,.09,'sine',.09,-160);noise(.03,.22,900,2.5);noise(.12,.06,3200,2,.02,-2200);}),
+ /* tower and wall archers: the old arrow sound, much quieter and throttled since many shoot at once */
+ arch:()=>once('arch',110,()=>{noise(.12,.06,2600,2,0,-1800);tone(420,.04,'triangle',.02,-200);}),
  hit:()=>once('hit',45,()=>{noise(.05,.16,900,1.5);tone(180,.05,'square',.05,-60);}),
  kill:()=>once('kill',50,()=>{noise(.09,.18,500,1);tone(260,.08,'triangle',.08,-160);}),
  castle:()=>once('castle',120,()=>{noise(.18,.28,180,0.8);tone(70,.18,'sine',.25,-20);}),
@@ -143,7 +147,7 @@ function fireLord(){const [sx,sy]=lordPos();const t=archFocus()||pickTarget(sx,s
  const a=Math.atan2(t.y-sy,t.x-sx);S.lordAim=a;t.pend+=S.lordDmg;
  S.shots.push({x:sx,y:sy,tg:t,dmg:S.lordDmg,spd:700,a,lord:1});
  const n=S.arrows;for(let i=1;i<n;i++){const off=Math.ceil(i/2)*(i%2?1:-1)*.16;S.shots.push({x:sx,y:sy,a:a+off,dmg:S.lordDmg*.8,spd:700,free:1,life:1.4});}
- SFX.bow();return true;}
+ SFX.twang();return true;}
 function update(dt){
  if(!S.started||S.over||S.paused)return;S.t+=dt;
  S.incT+=dt;if(S.incT>=1){S.incT=0;S.gold+=S.income;}
@@ -155,7 +159,7 @@ function update(dt){
  // archers standing on the castle wall
  S.wallT=(S.wallT||0)-dt;if(S.lv.warch&&S.wallT<=0){let fired=0;S.wAim=S.wAim||[];
   for(let i=0;i<S.lv.warch;i++){const [ax,ay]=wallArchScreen(i),[ox,oy]=unP(ax,ay),tg=archFocus()||pickTarget(ox,oy,900);if(!tg)break;const d=9*S.aAtk*bDm();tg.pend+=d;S.shots.push({x:ox,y:oy,tg,dmg:d,spd:560,a:0});S.wAim[i]=Math.atan2(tg.y-oy,tg.x-ox);fired=1;}
-  if(fired){S.wallT=.85;SFX.bow();}}
+  if(fired){S.wallT=.85;SFX.arch();}}
  // defensive AI: archers hold a line near the wall; melee only sally out to meet enemies inside the guard zone, then hurry home
  const ARCH_LINE=CX+70,MELEE_LINE=CX+420,ENGAGE=CX+450; // swordsmen can push out to the tower line
  for(const u of S.units){u.t-=dt;u.walk+=dt*8;u.atk=Math.max(0,u.atk-dt*4);
@@ -164,7 +168,7 @@ function update(dt){
   if(u.fixed){ // arrows leave from the archers on top of the tower (screen-space offset, so it is right in portrait too)
    const tz=50+(S.lv.bld||0)*6,[tsx,tsy]=P(u.x,u.y),[ox,oy]=unP(tsx,tsy-tz);let first=null;
    if(u.t<=0)for(let k=0;k<(u.arch||1);k++){const tg=pickTarget(ox,oy,u.range)||first;if(!tg)break;first=first||tg;u.face=Math.sign(tg.x-u.x)||1;tg.pend+=u.dmg;const [ax,ay]=unP(tsx+(k-((u.arch||1)-1)/2)*9,tsy-tz);S.shots.push({x:ax,y:ay,tg,dmg:u.dmg,spd:(S.lv.bld||0)?760:560,a:0,bolt:(S.lv.bld||0)>=1,big:(S.lv.bld||0)>=2});}
-   if(first)u.t=u.rate;continue;}
+   if(first){u.t=u.rate;SFX.arch();}continue;}
   if(u.hx==null){u.hx=u.ranged?CX+30+Math.random()*35:CX+70+Math.random()*50;u.hy=u.y;}
   const near=S.enemies.filter(e=>e.x<(u.ranged?u.x+u.range:ENGAGE));let[e,d]=nearest(near,u.x,u.y);
   // player-ordered target: every swordsman goes for it first, wherever it is on the field

@@ -92,8 +92,12 @@ const SFX={
  pluck:i=>withRev(()=>{const f=[233.08,311.13,293.66][i]||311.13;
   [[1,.24,1.4,'triangle'],[2.003,.12,1.0,'sine'],[3.01,.07,.7,'sine'],[4.02,.045,.5,'sine'],[5.04,.03,.35,'sine'],[6.07,.018,.25,'sine']].forEach(([m,v,d,ty])=>tone(f*m,d,ty,v,-f*m*.006));
   tone(f*.5,.9,'sine',.05);noise(.05,.08,f*5,2.5);noise(.02,.05,2400,1.5);}),
- ding:(perfect)=>{if(perfect)withRev(()=>{tone(392,3,'sine',.12);tone(587,2.4,'sine',.07);});withRev(()=>{const f0=131;[[1,.5,5.5],[2.0,.2,4.2],[2.76,.12,3.4],[0.5,.38,6]].forEach(([m,v,d])=>tone(f0*m,d,'sine',v));tone(f0*1.006,5,'sine',.22);
-  braam(51,.5,3.4);braam(65.4,.35,3);tone(34,1.6,'sine',.75,-8);noise(.6,.12,500,.8,0,-350);});},
+ ding:(perfect)=>{withRev(()=>{
+   /* 1) a hard bowstring snap: sharp crack + low thump of the string */
+   noise(.05,.5,1800,1.2);noise(.09,.3,600,1);tone(98,.25,'triangle',.5,-30);tone(196,.12,'triangle',.25,-60);
+   /* 2) then the ringing tail picked by ear: G2 bell with a C3 (fourth) layer, long reverb */
+   [[1,1,4.5],[2,.4,3.2],[2.76,.22,2.4],[4.07,.1,1.6],[.5,.5,5]].forEach(([m,a,d])=>{tone(98*m,d,'sine',.22*a);tone(130.81*m,d,'sine',.12*a);});
+   if(perfect){tone(392,3,'sine',.07);tone(523.25,2.6,'sine',.05);}});},
  coin:()=>tone(1300,.07,'triangle',.12),
  pick:()=>{tone(700,.08,'square',.1,500);tone(1050,.08,'square',.06,0,.06);},
  horn:()=>{[0,.18,.36].forEach((t,i)=>tone([220,277,330][i],.32,'sawtooth',.09,0,t));},

@@ -61,7 +61,7 @@ function whoosh(d,v,f0,f1){if(!AC||muted)return;if(!NB){NB=AC.createBuffer(1,AC.
 function ksPluck(f,v,dur,bright,damp0){if(!AC||muted)return;const sr=AC.sampleRate,len=Math.floor(sr*dur),buf=AC.createBuffer(1,len,sr),y=buf.getChannelData(0),N=Math.max(2,Math.round(sr/f));
  for(let i=0;i<N;i++)y[i]=(Math.random()*2-1)*(1-(1-bright)*Math.random());const damp=damp0||0.9965;
  const lp=1-bright*0.5;for(let i=N+1;i<len;i++)y[i]=damp*((1-lp)*y[i-N]+lp*0.5*(y[i-N]+y[i-N-1])); /* brighter = less smoothing per pass */
- const s=AC.createBufferSource(),q=AC.createGain(),n=AC.currentTime;s.buffer=buf;q.gain.setValueAtTime(v,n);q.gain.exponentialRampToValueAtTime(.001,n+dur);s.connect(q);q.connect(OUTN||master);s.start(n);}
+ const s=AC.createBufferSource(),q=AC.createGain(),n=AC.currentTime;s.buffer=buf;q.gain.setValueAtTime(v,n);q.gain.setValueAtTime(v,n+dur*.55);q.gain.exponentialRampToValueAtTime(.001,n+dur); /* let the string ring on its own, fade only at the end */s.connect(q);q.connect(OUTN||master);s.start(n);}
 let OUTN=null,REV=null;
 function withRev(fn){if(!AC)return;if(!REV){const len=AC.sampleRate*6,ir=AC.createBuffer(2,len,AC.sampleRate);for(let c=0;c<2;c++){const a=ir.getChannelData(c);for(let i=0;i<len;i++)a[i]=(Math.random()*2-1)*Math.pow(1-i/len,3.2);}
  const cv=AC.createConvolver();cv.buffer=ir;const wet=AC.createGain();wet.gain.value=0.55;REV=AC.createGain();REV.connect(master);REV.connect(cv);cv.connect(wet);wet.connect(master);}
@@ -97,9 +97,9 @@ const SFX={
  pluck:i=>withRev(()=>{const f=[233.08,311.13,293.66][i]||311.13;ksPluck(f,.55,1.8,.9,.997);ksPluck(f*1.002,.18,1.4,.5,.996);noise(.02,.06,3200,1.5);}),
  /* the release: a guitar string yanked hard, then contrabass + guitar ringing G2 with a C3 (fourth) on top */
  ding:(perfect)=>{withRev(()=>{
-   ksPluck(98,.7,2.4,.95);noise(.025,.3,3000,1.5);noise(.15,.3,130,.7);[-9,8].forEach(c=>tone(98*Math.pow(2,c/1200),.12,'sawtooth',.04,-4)); /* guitar snap + pick + body + fret buzz */
-   ksPluck(49,.55,5,.7,.9985);ksPluck(98,.4,5,.6,.999);   /* contrabass: low G1 and G2, long ring */
-   ksPluck(130.81,.3,4.5,.75,.9985);ksPluck(196,.14,3.5,.8,.998); /* guitar: C3 (the fourth) and G3 */
+   ksPluck(98,.5,2.4,.95);noise(.025,.25,3000,1.5);noise(.15,.3,130,.7);[-9,8].forEach(c=>tone(98*Math.pow(2,c/1200),.12,'sawtooth',.04,-4)); /* guitar snap + pick + body + fret buzz */
+   ksPluck(49,.4,5,.7,.9985);ksPluck(98,.28,5,.6,.999);   /* contrabass: low G1 and G2, long ring */
+   ksPluck(130.81,.22,4.5,.75,.9985);ksPluck(196,.1,3.5,.8,.998); /* guitar: C3 (the fourth) and G3 */
    if(perfect){ksPluck(392,.16,3,.9,.998);ksPluck(523.25,.1,2.6,.9,.998);}});}, coin:()=>tone(1300,.07,'triangle',.12),
  pick:()=>{tone(700,.08,'square',.1,500);tone(1050,.08,'square',.06,0,.06);},
  horn:()=>{[0,.18,.36].forEach((t,i)=>tone([220,277,330][i],.32,'sawtooth',.09,0,t));},

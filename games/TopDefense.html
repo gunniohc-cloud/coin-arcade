@@ -437,7 +437,7 @@ const mp=o=>{const [x,y]=P(o.x,o.y);return Object.assign(Object.create(o),{x,y})
 function draw(){
  g.setTransform(RS,0,0,RS,0,0);g.save();if(S.shake>.5)g.translate((Math.random()-.5)*S.shake,(Math.random()-.5)*S.shake);
  g.drawImage(ground,0,0);if(!PORT){const tt=performance.now()/1000;g.fillStyle='#ffffffcc';[[0,40,1],[300,70,.8],[620,30,1.2]].forEach(([o,y,s])=>{const cx=((o+tt*8*s)%(W+200))-100;E(cx,y,40*s,13*s,'#ffffffcc');E(cx+24*s,y-8*s,26*s,14*s,'#ffffffcc');E(cx-22*s,y-4*s,20*s,10*s,'#ffffffcc');});}PORT?drawCastleP():drawCastle();
- const ents=[...S.units.map(u=>[u,drawUnit]),...S.enemies.map(e=>[e,drawEnemy]),...S.items.map(i=>[i,drawBombItem])].map(([o,f])=>{const m=mp(o);if(o.stun>0){m.x+=(Math.random()-.5)*6;m.y+=(Math.random()-.5)*3;}return [m,f];}).sort((a,b)=>a[0].y-b[0].y);
+ const ents=[...S.units.map(u=>[u,drawUnit]),...S.enemies.map(e=>[e,drawEnemy]),...S.items.map(i=>[i,drawBombItem])].map(([o,f])=>{const m=mp(o);if(o.stun>0){m.x+=(Math.random()-.5)*6;m.y+=(Math.random()-.5)*3;}return [m,f];}).sort((a,b)=>(a[0].fixed?1:0)-(b[0].fixed?1:0)||a[0].y-b[0].y); /* towers, catapults, barricades always drawn on top */
  drawPools();ents.forEach(([o,f])=>f(o));S.shots.forEach(s=>{const o=mp(s);o.a=angP(s.a);drawArrow(o);});drawBoulders();
  g.textAlign='center';for(const f0 of S.fx){
   if(f0.dis){const m=mp(f0.dis),k=Math.max(0,f0.t/.9),R=m.r;m.stun=0;m.hitT=0;g.save();g.globalAlpha=k*k;drawEnemy(m);g.restore();
@@ -516,6 +516,7 @@ function enemyTap(p){
  if(selTower&&tBtns.some(b=>p.x>=b.x&&p.x<=b.x+b.w&&p.y>=b.y&&p.y<=b.y+b.h))return false; // tower menu buttons win
  const ab=selEnemy&&atkBtns.find(b=>p.x>=b.x&&p.x<=b.x+b.w&&p.y>=b.y&&p.y<=b.y+b.h);
  if(ab){if(ab.k=='sw')S.focus=selEnemy;else S.afocus=selEnemy;selEnemy=null;atkBtns=[];SFX.horn();return true;}
+ if(towerAt(p)){selEnemy=null;atkBtns=[];return false;} /* a tap on a tower selects the tower even if an orc overlaps it */
  let best=null,bd=1e9;for(const e of S.enemies){const [ex,ey]=P(e.x,e.y),d=Math.hypot(p.x-ex,p.y-(ey-e.r*.5));if(d<e.r+14&&d<bd){bd=d;best=e;}}
  if(best){selEnemy=best===selEnemy?null:best;selTower=null;return true;}
  if(selEnemy){selEnemy=null;atkBtns=[];return true;}
@@ -546,10 +547,11 @@ function towerTap(p){
   else if(u.cat){const tr=hitB.k=='rock'?'rock':hitB.k=='fire'?'fire':null;if(!tr)return true;if(u.track&&u.track!==tr){say('다른 강화 트랙을 이미 선택','#ff8080');return true;}if((u.tl||0)>=4)return true;const c=catCost(u);if(S.gold<c){say('골드 부족','#ff8080');return true;}S.gold-=c;u.spent=(u.spent||u.cost)+c;u.track=tr;u.tl=(u.tl||0)+1;SFX.pick();say((tr=='rock'?'🪨 강철돌 Lv':'🔥 불항아리 Lv')+u.tl,'#ffd27a');}
   else if(hitB.k=='arch'){if((u.arch||1)>=4)return true;const c=archCost(u);if(S.gold<c){say('골드 부족','#ff8080');return true;}S.gold-=c;u.spent=(u.spent||u.cost)+c;u.arch=(u.arch||1)+1;SFX.pick();say('🏹 궁수 '+u.arch+'명','#ffd27a');}
   return true;}
- const t=S.units.filter(u=>u.fixed).filter(u=>{const [sx,sy]=P(u.x,u.y),hw=u.cat?27:u.barr?28:19;if(u.barr)return Math.abs(p.x-sx)<=hw&&p.y<=sy+8&&p.y>=sy-36;return Math.abs(p.x-sx)<=hw&&p.y<=sy+(u.cat?13:6)&&p.y>=sy-(u.cat?50:60+(S.lv.bld||0)*6);}).sort((a,b)=>{const [ax,ay]=P(a.x,a.y),[bx,by]=P(b.x,b.y);return Math.hypot(p.x-ax,p.y-ay+25)-Math.hypot(p.x-bx,p.y-by+25);})[0];
+ const t=towerAt(p);
  if(t){selTower=t===selTower?null:t;return true;}
  if(selTower){selTower=null;return true;}
  return false;}
+function towerAt(p){return S.units.filter(u=>u.fixed).filter(u=>{const [sx,sy]=P(u.x,u.y),hw=u.cat?27:u.barr?28:19;if(u.barr)return Math.abs(p.x-sx)<=hw&&p.y<=sy+8&&p.y>=sy-36;return Math.abs(p.x-sx)<=hw&&p.y<=sy+(u.cat?13:6)&&p.y>=sy-(u.cat?50:60+(S.lv.bld||0)*6);}).sort((a,b)=>{const [ax,ay]=P(a.x,a.y),[bx,by]=P(b.x,b.y);return Math.hypot(p.x-ax,p.y-ay+25)-Math.hypot(p.x-bx,p.y-by+25);})[0];}
 function drawRepair(){tBtns=[];if(!selTower)return;if(!S.units.includes(selTower)){selTower=null;return;}
  const u=selTower,[x,y]=P(u.x,u.y),full=u.hp>=u.max,rc=repairCost(u),a=u.arch||1,ac=a<4?archCost(u):0;
  g.save();g.strokeStyle='#ffd27a';g.lineWidth=2;g.setLineDash([5,4]);g.beginPath();g.ellipse(x,y+3,26,8,0,0,7);g.stroke();g.setLineDash([]);

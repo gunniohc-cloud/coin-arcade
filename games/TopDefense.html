@@ -635,8 +635,9 @@ function drawTick(){if(!drag||drag.cancel||drag.out){stopDraw();return;}if(!TEN)
 function wrld(sx,sy){const [x,y]=unP(sx,sy);return {x,y};}
 function superUpdate(dt){if(S.paused)return;const W=SBW();
  for(const s of superShots){if(s.boltT>0)s.boltT-=dt;
-  if(s.delay>0){s.delay-=dt;if(s.delay<=0){s.boltT=.75;S.shake=Math.max(S.shake,14);}continue;} /* short wind-up, then a lightning-fast release */
-  if(s.done){for(const p of s.trail)p[2]+=dt;s.trail=s.trail.filter(p=>p[2]<0.5);continue;}const step=(s.spd||1500)*dt;s.t+=dt;s.x+=s.dx*step;s.y+=s.dy*step;s.trail.push([s.x,s.y,0]);for(const p of s.trail)p[2]+=dt;s.trail=s.trail.filter(p=>p[2]<0.5);
+  if(s.delay>0){s.delay-=dt;if(s.delay<=0){s.boltT=1.4;s.age=0;s.pts=[];S.shake=Math.max(S.shake,14);}continue;} /* short wind-up, then a lightning-fast release */
+  s.age=(s.age||0)+dt;
+  if(s.done){for(const p of s.trail)p[2]+=dt;s.trail=s.trail.filter(p=>p[2]<0.5);continue;}const step=(s.spd||1500)*dt;s.t+=dt;s.x+=s.dx*step;s.y+=s.dy*step;{const L=s.pts&&s.pts[s.pts.length-1];if(s.pts&&(!L||Math.hypot(s.x-L.x,s.y-L.y)>45))s.pts.push({x:s.x,y:s.y,t:s.age});}s.trail.push([s.x,s.y,0]);for(const p of s.trail)p[2]+=dt;s.trail=s.trail.filter(p=>p[2]<0.5);
   for(const e of [...S.enemies]){if(s.hit.has(e))continue;const [ex,ey]=P(e.x,e.y),rx=ex-s.x,ry=ey-s.y,along=rx*s.dx+ry*s.dy,side=Math.abs(rx*s.dy-ry*s.dx);
    if(along<20&&along>-step-30&&side<W+e.r){s.hit.add(e);e.superKill=e.hp<=s.dmg;e.stun=3+0.05*S.lv.dmg;e.hitK=.35;e.kx=e.kind=='boss'?(e.mega?14:22):60;hit(e,s.dmg);S.shake=Math.max(S.shake,6);once('shit',60,()=>{noise(.12,.5,500,1);tone(60,.25,'sine',.6,-25);});S.fx.push({x:e.x,y:e.y,r:e.r*2.4,t:.4});if(!e.superKill)for(let i=0;i<14;i++){const a=Math.random()*6.28,v=150+Math.random()*260;S.fx.push({x:e.x,y:e.y-e.r*.5,vx:Math.cos(a)*v,vy:Math.sin(a)*v-120,t:.55,part:i%3==0?'#ffffff':i%3==1?'#ffd040':'#ff5030'});}}}
   if(Math.random()<0.9)S.fx.push({...wrld(s.x+(Math.random()-.5)*W,s.y+(Math.random()-.5)*W),vx:(Math.random()-.5)*60,vy:-20-Math.random()*40,t:.4,part:Math.random()<.5?'#ffffff':'#ffe27a'});
@@ -670,12 +671,18 @@ function drawCharge(t){const k=Math.min(1,(t-drag.t0)/DRAW_FULL),[lx,ly]=P(...lo
 function drawUltBolt(s,W,T){g.save();g.lineCap='round';g.lineJoin='round';
  if(s.delay>0){const k=1-s.delay/.1,r=10+(1-k)*46;g.globalAlpha=.35+.5*k;g.strokeStyle='#9fe8ff';g.lineWidth=2+k*3;g.beginPath();g.arc(s.ox,s.oy,r,0,7);g.stroke();
   g.globalAlpha=.25+.6*k;g.fillStyle='#fff6c0';g.beginPath();g.arc(s.ox,s.oy,6+k*14,0,7);g.fill();g.restore();return;}
- if(s.boltT>0){const a=Math.min(1,s.boltT/.75),far=Math.max(CW,CH)*1.6,ex=s.ox+s.dx*far,ey=s.oy+s.dy*far,nx=-s.dy,ny=s.dx,n=26;
-  for(const [col,lw,amp,al] of [['#5fd8ff',W*1.1,W*.9,.35],['#bff4ff',W*.45,W*.55,.7],['#ffffff',W*.16,W*.35,1]]){g.globalAlpha=a*al;g.strokeStyle=col;g.lineWidth=lw*(.6+.4*a);g.beginPath();
-   for(let i=0;i<=n;i++){const u=i/n,j=i&&i<n?(Math.random()-.5)*2*amp:0,x=s.ox+(ex-s.ox)*u+nx*j,y=s.oy+(ey-s.oy)*u+ny*j;i?g.lineTo(x,y):g.moveTo(x,y);}g.stroke();}
-  /* side forks */
-  g.strokeStyle='#dff8ff';g.lineWidth=1.5;g.globalAlpha=a*.8;for(let k=0;k<5;k++){const u=Math.random()*.9,bx=s.ox+(ex-s.ox)*u,by=s.oy+(ey-s.oy)*u,sd=Math.random()<.5?-1:1;let x=bx,y=by;g.beginPath();g.moveTo(x,y);for(let q=0;q<4;q++){x+=s.dx*14+nx*sd*(8+Math.random()*10);y+=s.dy*14+ny*sd*(8+Math.random()*10);g.lineTo(x,y);}g.stroke();}}
- /* after-images */
+ const age=s.age||0,far=Math.max(CW,CH)*1.6,nx=-s.dy,ny=s.dx;
+ /* 1) a straight white light shoots down the lane first, faster than the arrow, then fades */
+ if(age<.35){const len=Math.min(far,age*14000),a=1-age/.35;g.globalAlpha=a*.5;g.strokeStyle='#bfe6ff';g.lineWidth=W*1.2*a+2;g.beginPath();g.moveTo(s.ox,s.oy);g.lineTo(s.ox+s.dx*len,s.oy+s.dy*len);g.stroke();
+  g.globalAlpha=a;g.strokeStyle='#ffffff';g.lineWidth=W*.35*a+1;g.beginPath();g.moveTo(s.ox,s.oy);g.lineTo(s.ox+s.dx*len,s.oy+s.dy*len);g.stroke();}
+ for(const p of s.pts||[]){const dt=age-p.t;
+  /* 2) wind shockwave: arcs fanning out to both sides of the spot the arrow just passed */
+  if(dt>=0&&dt<.55){const k=dt/.55,off=10+k*W*3.2,al=(1-k)*.75;g.globalAlpha=al;g.strokeStyle='#e8f6ff';g.lineWidth=2.2*(1-k)+.6;
+   for(const sd of [-1,1]){const cx=p.x+nx*sd*off,cy=p.y+ny*sd*off;g.beginPath();g.moveTo(cx-s.dx*16-nx*sd*6,cy-s.dy*16-ny*sd*6);g.quadraticCurveTo(cx+nx*sd*3,cy+ny*sd*3,cx+s.dx*16-nx*sd*6,cy+s.dy*16-ny*sd*6);g.stroke();}}
+  /* 3) leftover static: little sparks crackling along the path for a while */
+  if(dt>.05&&dt<1.3&&Math.random()<.35){const al=1-dt/1.3;g.globalAlpha=al*.9;g.strokeStyle=Math.random()<.5?'#bff4ff':'#ffffff';g.lineWidth=1.3;let x=p.x+(Math.random()-.5)*W,y=p.y+(Math.random()-.5)*W;g.beginPath();g.moveTo(x,y);
+   for(let q=0;q<3;q++){x+=(Math.random()-.5)*16;y+=(Math.random()-.5)*16;g.lineTo(x,y);}g.stroke();}}
+ g.globalAlpha=1; /* after-images */
  for(let i=0;i<s.trail.length;i+=3){const p=s.trail[i],k=1-p[2]/.5;if(k<=0)continue;g.save();g.globalAlpha=k*.35;g.translate(p[0],p[1]);g.rotate(Math.atan2(s.dy,s.dx));g.fillStyle='#fff6d0';g.fillRect(-70,-3,70,6);g.beginPath();g.moveTo(26,0);g.lineTo(0,-12);g.lineTo(0,12);g.fill();g.restore();}
  g.restore();}
 function drawBombUI(){const b=bombBtn(),n=S.bombs,t=performance.now()/1000;drawTick();if(drag&&!drag.cancel&&!drag.out)drawCharge(t);

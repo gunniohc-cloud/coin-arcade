@@ -489,7 +489,7 @@ function draw(){
  g.textAlign='center';const cx=CW/2,cy=CH/2;
  if(S.spawnLeft==0&&!S.enemies.length&&!S.over){g.font='bold 32px "Malgun Gothic"';g.lineWidth=5;g.strokeStyle='#000';const t=`다음 웨이브 ${Math.ceil(S.waveT)}`;g.strokeText(t,cx,cy);g.fillStyle='#fff';g.fillText(t,cx,cy);}
  drawCastleHP();
- superUpdate(1/60);drawSuperShots();
+ superUpdate(FDT);drawSuperShots();
  if(!S.over){drawFocus();drawTowerDrag();drawRepair();drawBombUI();}g.textAlign='center';
  if(!S.started){g.fillStyle='#000a';g.fillRect(0,0,CW,CH);g.fillStyle='#ffd27a';g.font=`bold ${PORT?40:52}px "Malgun Gothic"`;g.fillText('영주 디펜스',cx,cy-30);
   g.fillStyle='#fff';g.font='bold 20px "Malgun Gothic"';g.globalAlpha=.6+Math.sin(performance.now()/300)*.4;g.fillText('화면을 터치하면 시작',cx,cy+20);g.globalAlpha=1;
@@ -615,7 +615,7 @@ let superShots=[];
 function endDrag(ev,forceCancel){if(!drag)return;const d=drag;drag=null;stopDraw();try{cv.releasePointerCapture(ev.pointerId)}catch(e){}
  if(forceCancel||d.cancel||S.over||S.paused)return;
  const [lx,ly]=P(...lordPos());let dx=d.x-lx,dy=d.y-ly;const L=Math.hypot(dx,dy)||1;dx/=L;dy/=L;
- S.bombs--;superShots.push({x:lx,y:ly,ox:lx,oy:ly,dx,dy,t:0,delay:.1,spd:4200,boltT:0,seed:Math.random()*99,hit:new Set(),trail:[],dmg:superDmg()});SFX.ding(false);S.shake=Math.max(S.shake,10);}
+ S.bombs--;superShots.push({x:lx,y:ly,ox:lx,oy:ly,dx,dy,t:0,delay:.5,spd:37000,flash:0,boltT:0,seed:Math.random()*99,hit:new Set(),trail:[],dmg:superDmg()});} /* light first; the arrow (and its sound) follow 0.5s later */
 cv.addEventListener('pointerup',ev=>endDrag(ev,false));
 // drawing the great bow: while the ultimate is held and aimed, a creaking, tightening sound builds -
 // a rising strained hiss (the string stretching) plus stick-slip creaks like leather being pulled taut
@@ -635,9 +635,9 @@ function drawTick(){if(!drag||drag.cancel||drag.out){stopDraw();return;}if(!TEN)
 function wrld(sx,sy){const [x,y]=unP(sx,sy);return {x,y};}
 function superUpdate(dt){if(S.paused)return;const W=SBW();
  for(const s of superShots){if(s.boltT>0)s.boltT-=dt;
-  if(s.delay>0){s.delay-=dt;if(s.delay<=0){s.boltT=1.4;s.age=0;s.pts=[];S.shake=Math.max(S.shake,14);}continue;} /* short wind-up, then a lightning-fast release */
+  s.flash=(s.flash||0)+dt;if(s.delay>0){s.delay-=dt;if(s.delay<=0){s.boltT=1.4;s.age=0;s.pts=[];SFX.ding(false);S.shake=Math.max(S.shake,14);}continue;} /* short wind-up, then a lightning-fast release */
   s.age=(s.age||0)+dt;
-  if(s.done){for(const p of s.trail)p[2]+=dt;s.trail=s.trail.filter(p=>p[2]<0.5);continue;}const step=(s.spd||1500)*dt;s.t+=dt;s.x+=s.dx*step;s.y+=s.dy*step;{const L=s.pts&&s.pts[s.pts.length-1];if(s.pts&&(!L||Math.hypot(s.x-L.x,s.y-L.y)>45))s.pts.push({x:s.x,y:s.y,t:s.age});}s.trail.push([s.x,s.y,0]);for(const p of s.trail)p[2]+=dt;s.trail=s.trail.filter(p=>p[2]<0.5);
+  if(s.done){for(const p of s.trail)p[2]+=dt;s.trail=s.trail.filter(p=>p[2]<0.5);continue;}const step=(s.spd||1500)*dt,px=s.x,py=s.y;s.t+=dt;s.x+=s.dx*step;s.y+=s.dy*step;for(const p of s.trail)p[2]+=dt;s.trail=s.trail.filter(p=>p[2]<0.5);
   for(const e of [...S.enemies]){if(s.hit.has(e))continue;const [ex,ey]=P(e.x,e.y),rx=ex-s.x,ry=ey-s.y,along=rx*s.dx+ry*s.dy,side=Math.abs(rx*s.dy-ry*s.dx);
    if(along<20&&along>-step-30&&side<W+e.r){s.hit.add(e);e.superKill=e.hp<=s.dmg;e.stun=3+0.05*S.lv.dmg;e.hitK=.35;e.kx=e.kind=='boss'?(e.mega?14:22):60;hit(e,s.dmg);S.shake=Math.max(S.shake,6);once('shit',60,()=>{noise(.12,.5,500,1);tone(60,.25,'sine',.6,-25);});S.fx.push({x:e.x,y:e.y,r:e.r*2.4,t:.4});if(!e.superKill)for(let i=0;i<14;i++){const a=Math.random()*6.28,v=150+Math.random()*260;S.fx.push({x:e.x,y:e.y-e.r*.5,vx:Math.cos(a)*v,vy:Math.sin(a)*v-120,t:.55,part:i%3==0?'#ffffff':i%3==1?'#ffd040':'#ff5030'});}}}
   if(Math.random()<0.9)S.fx.push({...wrld(s.x+(Math.random()-.5)*W,s.y+(Math.random()-.5)*W),vx:(Math.random()-.5)*60,vy:-20-Math.random()*40,t:.4,part:Math.random()<.5?'#ffffff':'#ffe27a'});
@@ -669,23 +669,31 @@ function drawCharge(t){const k=Math.min(1,(t-drag.t0)/DRAW_FULL),[lx,ly]=P(...lo
  g.strokeStyle='#bff4ff';g.lineWidth=1.6;for(let j=0;j<Math.floor(1+k*5);j++){let a=Math.random()*6.28,r=12;g.globalAlpha=.5+.5*k;g.beginPath();g.moveTo(lx+Math.cos(a)*r,ly+Math.sin(a)*r);for(let q=0;q<5;q++){a+=(Math.random()-.5)*.9;r+=6+k*6;g.lineTo(lx+Math.cos(a)*r,ly+Math.sin(a)*r);}g.stroke();}
  g.restore();}
 function drawUltBolt(s,W,T){g.save();g.lineCap='round';g.lineJoin='round';
- if(s.delay>0){const k=1-s.delay/.1,r=10+(1-k)*46;g.globalAlpha=.35+.5*k;g.strokeStyle='#9fe8ff';g.lineWidth=2+k*3;g.beginPath();g.arc(s.ox,s.oy,r,0,7);g.stroke();
-  g.globalAlpha=.25+.6*k;g.fillStyle='#fff6c0';g.beginPath();g.arc(s.ox,s.oy,6+k*14,0,7);g.fill();g.restore();return;}
- const age=s.age||0,far=Math.max(CW,CH)*1.6,nx=-s.dy,ny=s.dx;
- /* 1) a straight white light shoots down the lane first, faster than the arrow, then fades */
- if(age<.35){const len=Math.min(far,age*14000),a=1-age/.35;g.globalAlpha=a*.5;g.strokeStyle='#bfe6ff';g.lineWidth=W*1.2*a+2;g.beginPath();g.moveTo(s.ox,s.oy);g.lineTo(s.ox+s.dx*len,s.oy+s.dy*len);g.stroke();
-  g.globalAlpha=a;g.strokeStyle='#ffffff';g.lineWidth=W*.35*a+1;g.beginPath();g.moveTo(s.ox,s.oy);g.lineTo(s.ox+s.dx*len,s.oy+s.dy*len);g.stroke();}
+ const far=Math.max(CW,CH)*1.6,nx=-s.dy,ny=s.dx,fl=s.flash||0,ang=Math.atan2(s.dy,s.dx);
+ /* 1) light beam: flashes down the lane the moment the string is let go, hums during the 0.5s wait, fades once the arrow flies */
+ const fade=s.delay>0?1:Math.max(0,1-(s.age||0)/.3);
+ if(fade>0){const len=Math.min(far,fl*9000),pul=1+Math.sin(fl*40)*.15,grow=s.delay>0?.4+.6*Math.min(1,fl/.5):1,ex=s.ox+s.dx*len,ey=s.oy+s.dy*len;
+  g.globalAlpha=.3*fade;g.strokeStyle='#9fd8ff';g.lineWidth=(W*1.1*pul+3)*grow;g.beginPath();g.moveTo(s.ox,s.oy);g.lineTo(ex,ey);g.stroke();
+  g.globalAlpha=.9*fade;g.strokeStyle='#ffffff';g.lineWidth=(W*.28*pul+1.5)*grow;g.beginPath();g.moveTo(s.ox,s.oy);g.lineTo(ex,ey);g.stroke();
+  g.globalAlpha=.55*fade;g.fillStyle='#fff6c0';g.beginPath();g.arc(s.ox,s.oy,(10+16*grow)*pul,0,7);g.fill();}
+ if(s.delay>0){g.restore();return;}
+ const age=s.age||0;
+ /* launch burst at the bow */
+ if(age<.45){const k=age/.45;g.globalAlpha=(1-k)*.8;g.strokeStyle='#ffffff';g.lineWidth=5*(1-k)+1;g.beginPath();g.arc(s.ox,s.oy,18+k*140,0,7);g.stroke();}
  for(const p of s.pts||[]){const dt=age-p.t;
-  /* 2) wind shockwave: arcs fanning out to both sides of the spot the arrow just passed */
-  if(dt>=0&&dt<.55){const k=dt/.55,off=10+k*W*3.2,al=(1-k)*.75;g.globalAlpha=al;g.strokeStyle='#e8f6ff';g.lineWidth=2.2*(1-k)+.6;
-   for(const sd of [-1,1]){const cx=p.x+nx*sd*off,cy=p.y+ny*sd*off;g.beginPath();g.moveTo(cx-s.dx*16-nx*sd*6,cy-s.dy*16-ny*sd*6);g.quadraticCurveTo(cx+nx*sd*3,cy+ny*sd*3,cx+s.dx*16-nx*sd*6,cy+s.dy*16-ny*sd*6);g.stroke();}}
-  /* 3) leftover static: little sparks crackling along the path for a while */
+  /* 2) wind shockwave: layered rings and air streaks blasting out to both sides of the arrow's path */
+  if(dt>=0&&dt<.65){const k=dt/.65,ease=1-Math.pow(1-k,3);g.save();g.translate(p.x,p.y);g.rotate(ang);
+   g.globalAlpha=(1-k)*.22;g.fillStyle='#d8f2ff';g.beginPath();g.ellipse(0,0,10+ease*18,8+ease*W*3.2,0,0,7);g.fill();
+   for(const j of [0,1,2]){const kk=Math.max(0,ease-j*.16);if(kk<=0)continue;g.globalAlpha=(1-k)*(.7-j*.18);g.strokeStyle=j?'#bfe6ff':'#ffffff';g.lineWidth=(4.5-j)*(1-k)+.8;g.beginPath();g.ellipse(-j*6,0,12+kk*20,8+kk*W*(3.8-j*.5),0,0,7);g.stroke();}
+   g.globalAlpha=(1-k)*.9;g.strokeStyle='#f4fbff';g.lineWidth=1.6;
+   for(const sd of [-1,1])for(let q=0;q<3;q++){const off=W*.7+ease*W*(3.4+q*.7),len=(1-k)*20+5,x=(q-1)*13-ease*12,y=sd*off;g.beginPath();g.moveTo(x,y);g.lineTo(x-len*.7,y+sd*len);g.stroke();}
+   g.restore();}
+  /* 3) leftover static crackling along the path */
   if(dt>.05&&dt<1.3&&Math.random()<.35){const al=1-dt/1.3;g.globalAlpha=al*.9;g.strokeStyle=Math.random()<.5?'#bff4ff':'#ffffff';g.lineWidth=1.3;let x=p.x+(Math.random()-.5)*W,y=p.y+(Math.random()-.5)*W;g.beginPath();g.moveTo(x,y);
    for(let q=0;q<3;q++){x+=(Math.random()-.5)*16;y+=(Math.random()-.5)*16;g.lineTo(x,y);}g.stroke();}}
  g.globalAlpha=1; /* after-images */
- for(let i=0;i<s.trail.length;i+=3){const p=s.trail[i],k=1-p[2]/.5;if(k<=0)continue;g.save();g.globalAlpha=k*.35;g.translate(p[0],p[1]);g.rotate(Math.atan2(s.dy,s.dx));g.fillStyle='#fff6d0';g.fillRect(-70,-3,70,6);g.beginPath();g.moveTo(26,0);g.lineTo(0,-12);g.lineTo(0,12);g.fill();g.restore();}
- g.restore();}
-function drawBombUI(){const b=bombBtn(),n=S.bombs,t=performance.now()/1000;drawTick();if(drag&&!drag.cancel&&!drag.out)drawCharge(t);
+ for(let i=0;i<s.trail.length;i+=3){const p=s.trail[i],k=1-p[2]/.5;if(k<=0)continue;g.save();g.globalAlpha=k*.35;g.translate(p[0],p[1]);g.rotate(ang);g.fillStyle='#fff6d0';g.fillRect(-70,-3,70,6);g.beginPath();g.moveTo(26,0);g.lineTo(0,-12);g.lineTo(0,12);g.fill();g.restore();}
+ g.restore();}function drawBombUI(){const b=bombBtn(),n=S.bombs,t=performance.now()/1000;drawTick();if(drag&&!drag.cancel&&!drag.out)drawCharge(t);
  g.save();g.globalAlpha=n?1:.45;
  g.beginPath();g.arc(b.x,b.y,b.r,0,7);g.fillStyle='#1a1208dd';g.fill();g.lineWidth=3;g.strokeStyle=drag?'#fff6c0':'#ffd27a';g.stroke();
  if(n&&!drag){g.globalAlpha=.25+Math.sin(t*4)*.15;g.beginPath();g.arc(b.x,b.y,b.r+5,0,7);g.strokeStyle='#ffe27a';g.lineWidth=3;g.stroke();g.globalAlpha=n?1:.45;}
@@ -705,8 +713,8 @@ function drawBombUI(){const b=bombBtn(),n=S.bombs,t=performance.now()/1000;drawT
 addEventListener('keydown',e=>{au();const k=e.key.toLowerCase();const u=UNITS.find(u=>u.key==k);if(u)summon(u);const p=UPS.find(p=>p.key==k);if(p)upgrade(p);if(k=='p')S.paused=!S.paused;});
 let last=performance.now(),frameN=0;
 // capped at ~60fps so 120Hz screens don't render twice as often
-let FPS=60,RS=1; // graphics options from the arcade menu: 60/30 fps, canvas resolution scale
-function loop(n){if(n-last<(FPS==30?30:15)){requestAnimationFrame(loop);return;}const dt=Math.min(.05,(n-last)/1000);last=n;update(dt);draw();if((frameN=(frameN+1)%4)==0)btns.forEach(f=>f()); /* button labels only need refreshing a few times a second */requestAnimationFrame(loop);}
+let FPS=30,RS=1,FDT=1/30; // graphics options from the arcade menu: 60/30 fps, canvas resolution scale
+function loop(n){if(n-last<(FPS==30?30:15)){requestAnimationFrame(loop);return;}const dt=Math.min(.05,(n-last)/1000);last=n;FDT=dt;update(dt);draw();if((frameN=(frameN+1)%4)==0)btns.forEach(f=>f()); /* button labels only need refreshing a few times a second */requestAnimationFrame(loop);}
 function fit(){const st=document.getElementById("stage"),aw=st.clientWidth-4,ah=st.clientHeight-4,k=Math.min(aw/CW,ah/CH);cv.style.width=CW*k+"px";cv.style.height=CH*k+"px";}
 // commands from the arcade gear menu
 let menuPaused=false;addEventListener("message",e=>{const d=e.data;if(!d||d.type!=="arcade-cmd")return;

@@ -620,13 +620,19 @@ cv.addEventListener('pointerup',ev=>endDrag(ev,false));
 // drawing the great bow: while the ultimate is held and aimed, a creaking, tightening sound builds -
 // a rising strained hiss (the string stretching) plus stick-slip creaks like leather being pulled taut
 const DRAW_FULL=1.5;let TEN=null;
-// bow being drawn: no hiss, just irregular wood/leather creaks - 'tu-du-duk' - getting faster and tighter as it bends
-function creak(k){if(!AC||muted)return;const f=110+Math.random()*90+k*60;tone(f,.045,'triangle',.16+.1*k,-f*.5);noise(.025,.12+.08*k,420+Math.random()*500+k*300,3);if(Math.random()<.4)tone(f*.6,.06,'sine',.1,-30,.01);}
-function startDraw(){if(TEN)return;TEN={next:0};}
+// bow being drawn: first a tight leather squeeze as the grip closes, then creaks that come faster and faster while it bends,
+// and once fully drawn only a rare, slow, random 'jjik ... jjik'
+function stickSlip(n,f0,f1,dur,v){if(!AC||muted)return;let t=0;for(let i=0;i<n;i++){const u=i/(n-1),f=f0+(f1-f0)*u+Math.random()*120,a=v*Math.sin(Math.PI*Math.min(1,u*1.2))+.02;
+ noise(.012,a,f,7,t);tone(f*.5,.018,'triangle',a*.5,-f*.2,t);t+=dur/n*(.6+Math.random()*.8);}}
+function squeeze(){stickSlip(26,700,1100,.38,.13);noise(.3,.04,350,1.5);}           /* fist closing on the leather grip */
+function creak(k){stickSlip(5,500+k*500,700+k*600,.05,.11+.06*k);}                   /* one creak of the bending bow */
+function jjik(){stickSlip(4,1300,1600,.03,.07);}                                       /* fully drawn: a lone faint squeak */
+function startDraw(){if(TEN)return;TEN={next:performance.now()/1000+.42};squeeze();}
 function stopDraw(){TEN=null;}
 function drawTick(){if(!drag||drag.cancel||drag.out){stopDraw();return;}if(!TEN)startDraw();const now=performance.now()/1000,k=Math.min(1,(now-drag.t0)/DRAW_FULL);
- if(now>=TEN.next){creak(k);if(Math.random()<.35)setTimeout(()=>creak(k),25+Math.random()*30);TEN.next=now+(k>=1?.18:.16-.1*k)*(.6+Math.random()*.8);}}
-cv.addEventListener('pointercancel',ev=>endDrag(ev,true));
+ if(now<TEN.next)return;
+ if(k<1){creak(k);TEN.next=now+(.26-.2*k)*(.75+Math.random()*.5);}            /* tempo speeds up as the bow bends */
+ else{jjik();TEN.next=now+.9+Math.random()*1.6;}}                              /* held at full draw: slow and irregular */cv.addEventListener('pointercancel',ev=>endDrag(ev,true));
 function wrld(sx,sy){const [x,y]=unP(sx,sy);return {x,y};}
 function superUpdate(dt){if(S.paused)return;const W=SBW();
  for(const s of superShots){if(s.boltT>0)s.boltT-=dt;

@@ -637,7 +637,9 @@ function superUpdate(dt){if(S.paused)return;const W=SBW();
  for(const s of superShots){if(s.boltT>0)s.boltT-=dt;
   s.flash=(s.flash||0)+dt;if(s.delay>0){s.delay-=dt;if(s.delay<=0){s.boltT=1.4;s.age=0;s.pts=[];SFX.ding(false);S.shake=Math.max(S.shake,14);}continue;} /* short wind-up, then a lightning-fast release */
   s.age=(s.age||0)+dt;
-  if(s.done){for(const p of s.trail)p[2]+=dt;s.trail=s.trail.filter(p=>p[2]<0.5);continue;}const step=(s.spd||1500)*dt,px=s.x,py=s.y;s.t+=dt;s.x+=s.dx*step;s.y+=s.dy*step;for(const p of s.trail)p[2]+=dt;s.trail=s.trail.filter(p=>p[2]<0.5);
+  if(s.done){for(const p of s.trail)p[2]+=dt;s.trail=s.trail.filter(p=>p[2]<0.5);continue;}const step=(s.spd||1500)*dt,px=s.x,py=s.y;s.t+=dt;s.x+=s.dx*step;s.y+=s.dy*step;for(const p of s.trail)p[2]+=dt;
+  /* the arrow crosses the screen in about one frame, so lay shockwave points and after-images all along the step */
+  for(let d=0;d<=step;d+=40){const x=px+s.dx*d,y=py+s.dy*d,L=s.pts&&s.pts[s.pts.length-1];if(s.pts&&(!L||Math.hypot(x-L.x,y-L.y)>=45))s.pts.push({x,y,t:s.age-dt*(1-d/step)});s.trail.push([x,y,0]);}s.trail=s.trail.filter(p=>p[2]<0.5);
   for(const e of [...S.enemies]){if(s.hit.has(e))continue;const [ex,ey]=P(e.x,e.y),rx=ex-s.x,ry=ey-s.y,along=rx*s.dx+ry*s.dy,side=Math.abs(rx*s.dy-ry*s.dx);
    if(along<20&&along>-step-30&&side<W+e.r){s.hit.add(e);e.superKill=e.hp<=s.dmg;e.stun=3+0.05*S.lv.dmg;e.hitK=.35;e.kx=e.kind=='boss'?(e.mega?14:22):60;hit(e,s.dmg);S.shake=Math.max(S.shake,6);once('shit',60,()=>{noise(.12,.5,500,1);tone(60,.25,'sine',.6,-25);});S.fx.push({x:e.x,y:e.y,r:e.r*2.4,t:.4});if(!e.superKill)for(let i=0;i<14;i++){const a=Math.random()*6.28,v=150+Math.random()*260;S.fx.push({x:e.x,y:e.y-e.r*.5,vx:Math.cos(a)*v,vy:Math.sin(a)*v-120,t:.55,part:i%3==0?'#ffffff':i%3==1?'#ffd040':'#ff5030'});}}}
   if(Math.random()<0.9)S.fx.push({...wrld(s.x+(Math.random()-.5)*W,s.y+(Math.random()-.5)*W),vx:(Math.random()-.5)*60,vy:-20-Math.random()*40,t:.4,part:Math.random()<.5?'#ffffff':'#ffe27a'});

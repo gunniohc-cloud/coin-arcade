@@ -621,18 +621,17 @@ cv.addEventListener('pointerup',ev=>endDrag(ev,false));
 // a rising strained hiss (the string stretching) plus stick-slip creaks like leather being pulled taut
 const DRAW_FULL=1.5;let TEN=null;
 // bow being drawn: first a tight leather squeeze as the grip closes, then creaks that come faster and faster while it bends,
-// and once fully drawn only a rare, slow, random 'jjik ... jjik'
+// and once fully drawn it goes quiet
 function stickSlip(n,f0,f1,dur,v){if(!AC||muted)return;let t=0;for(let i=0;i<n;i++){const u=i/(n-1),f=f0+(f1-f0)*u+Math.random()*120,a=v*Math.sin(Math.PI*Math.min(1,u*1.2))+.02;
  noise(.012,a,f,7,t);tone(f*.5,.018,'triangle',a*.5,-f*.2,t);t+=dur/n*(.6+Math.random()*.8);}}
-function squeeze(){stickSlip(26,700,1100,.38,.13);noise(.3,.04,350,1.5);}           /* fist closing on the leather grip */
-function creak(k){stickSlip(5,500+k*500,700+k*600,.05,.11+.06*k);}                   /* one creak of the bending bow */
-function jjik(){stickSlip(4,1300,1600,.03,.07);}                                       /* fully drawn: a lone faint squeak */
-function startDraw(){if(TEN)return;TEN={next:performance.now()/1000+.42};squeeze();}
+function squeeze(){stickSlip(18,260,420,.45,.09);noise(.4,.05,180,1.2);}            /* low leather friction as the fist closes on the grip */
+function creak(k){stickSlip(3,220+k*120,300+k*160,.04,.14+.05*k);tone(90+k*30,.07,'sine',.12,-30);} /* one low 'u-du-duk' of the bending bow */
+// six creaks on the way to full draw, closer and closer together; silence once fully drawn
+const CREAKS=[.42,.78,1.03,1.21,1.34,1.44];
+function startDraw(){if(TEN)return;TEN={i:0};squeeze();}
 function stopDraw(){TEN=null;}
-function drawTick(){if(!drag||drag.cancel||drag.out){stopDraw();return;}if(!TEN)startDraw();const now=performance.now()/1000,k=Math.min(1,(now-drag.t0)/DRAW_FULL);
- if(now<TEN.next)return;
- if(k<1){creak(k);TEN.next=now+(.26-.2*k)*(.75+Math.random()*.5);}            /* tempo speeds up as the bow bends */
- else{jjik();TEN.next=now+.9+Math.random()*1.6;}}                              /* held at full draw: slow and irregular */cv.addEventListener('pointercancel',ev=>endDrag(ev,true));
+function drawTick(){if(!drag||drag.cancel||drag.out){stopDraw();return;}if(!TEN)startDraw();const e=performance.now()/1000-drag.t0;
+ while(TEN.i<CREAKS.length&&e>=CREAKS[TEN.i]){creak(TEN.i/(CREAKS.length-1));TEN.i++;}}cv.addEventListener('pointercancel',ev=>endDrag(ev,true));
 function wrld(sx,sy){const [x,y]=unP(sx,sy);return {x,y};}
 function superUpdate(dt){if(S.paused)return;const W=SBW();
  for(const s of superShots){if(s.boltT>0)s.boltT-=dt;

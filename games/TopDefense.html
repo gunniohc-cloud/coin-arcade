@@ -99,6 +99,7 @@ const SFX={
  pluck:i=>withRev(()=>{const f=[233.08,311.13,293.66][i]||311.13;ksPluck(f,.55,1.8,.9,.997);ksPluck(f*1.002,.18,1.4,.5,.996);noise(.02,.06,3200,1.5);}),
  /* the release: no plucked strings - a grand swell of harmonics on G (G1-G2-D3-G3-B3-D4) with the C3 fourth, soft attack, long reverb */
  ding:(perfect)=>{withRev(()=>{
+   ksPluck(49,.55,3.2,.3,.9988);ksPluck(73.4,.22,2.6,.25,.9985);noise(.12,.25,90,.7); /* one thick, dark contrabass string pulled hard (G1 + D2), low thump */
    [[49,.34,5.5],[98,.3,5.2],[146.8,.16,4.6],[196,.14,4.2],[246.9,.07,3.6],[293.7,.06,3.2],[392,.04,2.8],[130.81,.15,4.8]].forEach(([fq,v,d])=>{swell(fq,v,d,'sine');swell(fq*1.004,v*.5,d*.9,'triangle');});
    noise(.6,.08,220,.6,0,-120);});}, coin:()=>tone(1300,.07,'triangle',.12),
  pick:()=>{tone(700,.08,'square',.1,500);tone(1050,.08,'square',.06,0,.06);},

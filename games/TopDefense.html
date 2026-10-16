@@ -614,7 +614,8 @@ let superShots=[];
 function endDrag(ev,forceCancel){if(!drag)return;const d=drag;drag=null;stopDraw();try{cv.releasePointerCapture(ev.pointerId)}catch(e){}
  if(forceCancel||d.cancel||S.over||S.paused)return;
  const [lx,ly]=P(...lordPos());let dx=d.x-lx,dy=d.y-ly;const L=Math.hypot(dx,dy)||1;dx/=L;dy/=L;
- S.bombs--;superShots.push({x:lx,y:ly,ox:lx,oy:ly,dx,dy,t:0,delay:.1,spd:4200,boltT:0,seed:Math.random()*99,hit:new Set(),trail:[],dmg:superDmg()});SFX.ding(false);S.shake=Math.max(S.shake,10);
+ S.bombs--;superShots.push({x:lx,y:ly,ox:lx,oy:ly,dx,dy,t:0,delay:.1,spd:4200,boltT:0,seed:Math.random()*99,hit:new Set(),trail:[],dmg:superDmg()});SFX.ding(false);S.shake=Math.max(S.shake,10);}
+cv.addEventListener('pointerup',ev=>endDrag(ev,false));
 // drawing the great bow: while the ultimate is held and aimed, a creaking, tightening sound builds -
 // a rising strained hiss (the string stretching) plus stick-slip creaks like leather being pulled taut
 const DRAW_FULL=1.5;let TEN=null;

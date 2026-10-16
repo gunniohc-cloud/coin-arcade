@@ -683,9 +683,9 @@ function drawUltBolt(s,W,T){g.save();const far=Math.max(CW,CH)*1.6,fl=s.flash||0
   g.restore();return;}
  const age=s.age||0,HOLD=.45,FADE=.3;if(age>HOLD+FADE){g.restore();return;}
  const len=Math.min(far,age*20000),shrink=age<HOLD?1:1-(age-HOLD)/FADE,r=R*shrink*(age<.05?.6+age*8:1);
- g.globalCompositeOperation='lighter';beamBand(s.ox,s.oy,s.dx,s.dy,len,r*1.9,'#2f7fe0',.28,t,.07);
- beamBand(s.ox,s.oy,s.dx,s.dy,len,r*1.25,'#7fc8ff',.5,t,.045);
- g.globalCompositeOperation='source-over';beamBand(s.ox,s.oy,s.dx,s.dy,len,r*.6,'#ffffff',.95,t,.02);
+ beamBand(s.ox,s.oy,s.dx,s.dy,len,r*1.9,'#3f8fff',.38,t,.07);
+ beamBand(s.ox,s.oy,s.dx,s.dy,len,r*1.25,'#8fd6ff',.7,t,.045);
+ beamBand(s.ox,s.oy,s.dx,s.dy,len,r*.6,'#ffffff',.95,t,.02);
  for(const [rr,col,al] of [[2.3,'#4fb0ff',.4],[1.6,'#a8e4ff',.7],[.95,'#ffffff',1]]){g.globalAlpha=al*shrink;g.fillStyle=col;g.beginPath();g.arc(s.ox,s.oy,R*rr*(1+Math.sin(t*50)*.1),0,7);g.fill();}
  g.globalAlpha=shrink;g.fillStyle='#e8f8ff';for(let i=0;i<6;i++){const u=Math.random(),x=s.ox+s.dx*len*u+(-s.dy)*(Math.random()-.5)*r*4,y=s.oy+s.dy*len*u+s.dx*(Math.random()-.5)*r*4;g.fillRect(x,y,2.5,2.5);}
  g.restore();}function drawBombUI(){const b=bombBtn(),n=S.bombs,t=performance.now()/1000;drawTick();if(drag&&!drag.cancel&&!drag.out)drawCharge(t);

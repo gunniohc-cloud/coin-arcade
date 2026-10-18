@@ -37,7 +37,9 @@ body.port #ui button{grid-template-columns:1fr;justify-items:center;text-align:c
 body.port #ui button i{font-size:12px}body.port #ui button b{font-size:9px}
 body.port #ui{grid-template-columns:repeat(7,minmax(0,1fr))!important}
 body.port #ui button span{white-space:normal;word-break:keep-all}
-#ui button *{pointer-events:none}</style></head><body>
+#ui button *{pointer-events:none}
+/* Safari: keep the canvas inside its own area and the button bar always on top */
+#stage{overflow:hidden;position:relative;z-index:0;min-height:0}#ui{position:relative;z-index:2;flex-shrink:0}</style></head><body>
 <div id="stage"><canvas id="c" width="1000" height="480"></canvas></div>
 <div id="ui"></div>
 <div id="info">1~3 소환 · Q W E R T Y 업그레이드 · 필살 화살 버튼을 드래그해서 조준 (웨이브마다 1발) · P 일시정지</div>
@@ -710,14 +712,14 @@ let last=performance.now(),frameN=0;
 // capped at ~60fps so 120Hz screens don't render twice as often
 let FPS=30,RS=1,FDT=1/30; // graphics options from the arcade menu: 60/30 fps, canvas resolution scale
 function loop(n){if(n-last<(FPS==30?30:15)){requestAnimationFrame(loop);return;}const dt=Math.min(.05,(n-last)/1000);last=n;FDT=dt;update(dt);draw();if((frameN=(frameN+1)%4)==0)btns.forEach(f=>f()); /* button labels only need refreshing a few times a second */requestAnimationFrame(loop);}
-function fit(){const st=document.getElementById("stage"),aw=st.clientWidth-4,ah=st.clientHeight-4,k=Math.min(aw/CW,ah/CH);cv.style.width=CW*k+"px";cv.style.height=CH*k+"px";}
+function fit(){const st=document.getElementById("stage"),vh=(window.visualViewport?visualViewport.height:innerHeight),aw=st.clientWidth-4,ah=Math.min(st.clientHeight,vh-document.getElementById("ui").offsetHeight-(st.offsetTop||0))-4,k=Math.min(aw/CW,ah/CH);cv.style.width=CW*k+"px";cv.style.height=CH*k+"px";}
 // commands from the arcade gear menu
 let menuPaused=false;addEventListener("message",e=>{const d=e.data;if(!d||d.type!=="arcade-cmd")return;
  if(d.cmd=="gfx"){FPS=d.fps==30?30:60;const r={high:2,mid:1,low:.7}[d.res]||1;if(r!==RS){RS=r;cv.width=CW*RS;cv.height=CH*RS;}}
  if(d.cmd=="mute")muted=!!d.on;
  if(d.cmd=="pause"&&!S.paused&&!S.over){S.paused=true;menuPaused=true;}
  if(d.cmd=="resume"&&menuPaused){menuPaused=false;S.paused=false;}});
-reset();setMode();fit();addEventListener("resize",()=>{setMode();fit();});requestAnimationFrame(loop);
+reset();setMode();fit();addEventListener("resize",()=>{setMode();fit();});if(window.visualViewport)visualViewport.addEventListener("resize",fit);setTimeout(fit,300);requestAnimationFrame(loop);
 </script><style>/* no long-press text selection, callout menu or tap flash */*{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}input,textarea{-webkit-user-select:text;user-select:text}#ui button *{pointer-events:none}</style>
 <script>addEventListener('contextmenu',e=>{if(!e.target.closest||!e.target.closest('input,textarea'))e.preventDefault();});addEventListener('selectstart',e=>{if(!e.target.closest||!e.target.closest('input,textarea'))e.preventDefault();});</script>
 <script>/* iOS suspends audio when the screen locks: resume it when we come back and on the next touch */(function(){const wake=()=>{try{if(typeof AC!=='undefined'&&AC&&AC.state!=='running')AC.resume();}catch(e){}};document.addEventListener('visibilitychange',()=>{if(!document.hidden)wake();});['pointerdown','touchend','keydown'].forEach(ev=>addEventListener(ev,wake,true));addEventListener('message',e=>{if(e.data&&e.data.type==='arcade-cmd'&&e.data.cmd==='resume')wake();});})();</script>

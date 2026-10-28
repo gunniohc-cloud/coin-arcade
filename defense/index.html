@@ -485,7 +485,7 @@ function draw(){
   else{g.font='bold 14px sans-serif';g.lineWidth=3;g.strokeStyle='#000';g.strokeText(f.txt,f.x,f.y-(.6-f.t)*30);g.fillStyle=f.col||'#fff';g.fillText(f.txt,f.x,f.y-(.6-f.t)*30);}}
  g.globalAlpha=1;g.restore();
  // HUD (two rows in portrait)
- const items=[`💰 ${S.gold}`,`🌊 웨이브 ${S.wave}/${MAXW}`,`⏱ ${fmtT(S.t)}`,`👑 공격 ${S.lordDmg}`,`⚡ 공속 ${(1/S.lordRate).toFixed(1)}/s`,`🏛️ 건물 Lv${S.lv.bld}`];
+ const items=[`💰 ${S.gold}`,`🌊 ${S.wave}/${MAXW}`,`⏱ ${fmtT(S.t)}`,`👑 공격 ${S.lordDmg}`,`⚡ 공속 ${(1/S.lordRate).toFixed(1)}/s`,`🏛️ 건물 Lv${S.lv.bld}`];
  g.fillStyle='#1a1208cc';g.fillRect(0,0,CW,PORT?56:36);g.fillStyle='#fbeed3';g.font=`bold ${PORT?15:17}px "Malgun Gothic"`;g.textAlign='left';
  if(PORT)items.forEach((t,i)=>g.fillText(t,12+(i%3)*155,22+Math.floor(i/3)*24));
  else[14,140,270,370,510,680].forEach((x,i)=>g.fillText(items[i],x,24));
@@ -698,7 +698,7 @@ function drawUltBolt(s,W,T){g.save();const far=Math.max(CW,CH)*1.6,fl=s.flash||0
  g.save();g.translate(b.x,b.y);g.rotate(-Math.PI/4);g.fillStyle='#fff6d0';g.fillRect(-14,-2,22,4);g.fillStyle='#ffd040';g.beginPath();g.moveTo(15,0);g.lineTo(6,-7);g.lineTo(6,7);g.fill();g.fillStyle='#ff9a20';g.fillRect(-17,-5,5,10);g.restore();
  g.globalAlpha=1;g.beginPath();g.arc(b.x+b.r*.72,b.y+b.r*.72,13,0,7);g.fillStyle=n?'#e0a02f':'#555';g.fill();g.strokeStyle='#fff';g.lineWidth=2;g.stroke();
  g.fillStyle='#fff';g.font='bold 15px sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText(n,b.x+b.r*.72,b.y+b.r*.72+1);if(n>=BOMB_MAX){g.font='bold 9px sans-serif';g.fillStyle='#ffd27a';g.fillText('MAX',b.x+b.r*.72,b.y+b.r*.72+20);}g.textBaseline='alphabetic';
- g.font='bold 11px "Malgun Gothic"';g.fillStyle='#fbeed3';g.fillText(drag?'여기로 놓으면 취소':'필살 화살 · 드래그로 조준',b.x-(PORT?40:0),b.y-b.r-8);
+ g.font='bold 11px "Malgun Gothic"';g.fillStyle='#fbeed3';g.fillText(drag?'여기로 놓으면 취소':'필살',b.x-(PORT?40:0),b.y-b.r-8);
  g.restore();
  if(!drag||drag.out)return;
  // aim preview: a wide golden lane from the lord through the finger, to the edge of the screen

@@ -728,10 +728,10 @@ reset();setMode();btns.forEach(f=>f());fit();if(window.ResizeObserver)new Resize
 /* MONO EDITION - handheld-style greyscale pixels:
    the game renders at low resolution (one pixel = a chunky block on screen), then every pixel is snapped to one of 16 grey levels,
    squeezed into the light half of the range so nothing goes too dark. Tone changes therefore always happen pixel by pixel. */
-const PIX_RS=0.45,GREYS=16,G_LO=0.34,G_HI=0.97;
+const PIX_RS=0.45,GREYS=16,G_LO=0.27,G_HI=0.97;
 (function(){const P=CanvasRenderingContext2D.prototype,fo=Object.getOwnPropertyDescriptor(P,'font');
  /* bigger type so it stays readable at the low resolution */
- Object.defineProperty(P,'font',{configurable:true,get(){return fo.get.call(this)},set(v){fo.set.call(this,String(v).replace(/(\d+(\.\d+)?)px/,(m,n)=>Math.round(n*1.6)+'px'))}});})();
+ Object.defineProperty(P,'font',{configurable:true,get(){return fo.get.call(this)},set(v){fo.set.call(this,String(v).replace(/(\d+(\.\d+)?)px/,(m,n)=>Math.round(n*1.3)+'px'))}});})();
 const LUT=new Uint8Array(256);for(let i=0;i<256;i++){const l=G_LO+(G_HI-G_LO)*(i/255),q=Math.round((l-G_LO)/(G_HI-G_LO)*(GREYS-1));LUT[i]=Math.round((G_LO+q*(G_HI-G_LO)/(GREYS-1))*255);}
 function applyRes(){RS=PIX_RS;cv.width=Math.round(CW*RS);cv.height=Math.round(CH*RS);}
 applyRes();
